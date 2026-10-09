@@ -60,6 +60,8 @@ export type Farm = {
   group: THREE.Group;
   /** Called every frame for things that move (windmill, water sparkles). */
   animate: (time: number, dt: number) => void;
+  /** Hides small decoration (grass, flowers) to help slower phones. */
+  setLowDetail: () => void;
 };
 
 export function buildFarm(level: LevelDef): Farm {
@@ -81,7 +83,12 @@ export function buildFarm(level: LevelDef): Farm {
 
   // --- Ground with soft color patches and mowing stripes.
   const seg = 2;
-  const ground = new THREE.PlaneGeometry(W + MARGIN * 2, H + MARGIN * 2, Math.ceil((W + MARGIN * 2) / seg), Math.ceil((H + MARGIN * 2) / seg));
+  const ground = new THREE.PlaneGeometry(
+    W + MARGIN * 2,
+    H + MARGIN * 2,
+    Math.ceil((W + MARGIN * 2) / seg),
+    Math.ceil((H + MARGIN * 2) / seg),
+  );
   ground.rotateX(-Math.PI / 2);
   ground.translate(W / 2, 0, H / 2);
   const gp = ground.attributes.position;
@@ -166,7 +173,11 @@ export function buildFarm(level: LevelDef): Farm {
   const windmill = addWindmill(group, solid, level, addShadow);
 
   // --- Water and bridges
-  const waterMaterial = new THREE.MeshLambertMaterial({ color: PALETTE.water, emissive: '#0A5C8F', emissiveIntensity: 0.25 });
+  const waterMaterial = new THREE.MeshLambertMaterial({
+    color: PALETTE.water,
+    emissive: '#0A5C8F',
+    emissiveIntensity: 0.25,
+  });
   for (const w of level.water) {
     const bank = new THREE.PlaneGeometry(m(w.w) + 0.6, m(w.h) + 0.6);
     bank.rotateX(-Math.PI / 2);
@@ -185,7 +196,10 @@ export function buildFarm(level: LevelDef): Farm {
         const off = side * ((alongX ? m(w.h) : m(w.w)) / 2 + 0.25);
         const px = alongX ? m(w.x) + a : m(w.x + w.w / 2) + off;
         const pz = alongX ? m(w.y + w.h / 2) + off : m(w.y) + a;
-        faceted.add(shapes.rock, rng() > 0.5 ? PALETTE.rock : '#C7CCD2', { pos: [px, 0.04, pz], scale: [0.18, 0.1, 0.15] });
+        faceted.add(shapes.rock, rng() > 0.5 ? PALETTE.rock : '#C7CCD2', {
+          pos: [px, 0.04, pz],
+          scale: [0.18, 0.1, 0.15],
+        });
       }
     }
   }
@@ -197,11 +211,17 @@ export function buildFarm(level: LevelDef): Farm {
     const cx = m(r.x + r.w / 2);
     const cz = m(r.y + r.h / 2);
     const len = alongX ? m(r.w) + 0.3 : m(r.h) + 0.3;
-    solid.add(shapes.box, PALETTE.woodDark, { pos: [cx, 0.55, cz], scale: alongX ? [len, 0.1, 0.12] : [0.12, 0.1, len] });
+    solid.add(shapes.box, PALETTE.woodDark, {
+      pos: [cx, 0.55, cz],
+      scale: alongX ? [len, 0.1, 0.12] : [0.12, 0.1, len],
+    });
     const n = Math.max(1, Math.round(len / 1));
     for (let i = 0; i <= n; i++) {
       const tt = -len / 2 + (i / n) * len;
-      solid.add(shapes.box, PALETTE.woodDark, { pos: alongX ? [cx + tt, 0.3, cz] : [cx, 0.3, cz + tt], scale: [0.12, 0.6, 0.12] });
+      solid.add(shapes.box, PALETTE.woodDark, {
+        pos: alongX ? [cx + tt, 0.3, cz] : [cx, 0.3, cz + tt],
+        scale: [0.12, 0.6, 0.12],
+      });
     }
   }
 
@@ -237,7 +257,7 @@ export function buildFarm(level: LevelDef): Farm {
   }
 
   // --- Grass tufts and flowers (instanced = one draw call each)
-  addGrassAndFlowers(group, level, rng);
+  const decor = addGrassAndFlowers(group, level, rng);
 
   group.add(solid.mesh(false));
   group.add(faceted.mesh(true));
@@ -253,6 +273,9 @@ export function buildFarm(level: LevelDef): Farm {
     animate: (time, dt) => {
       windmill.rotation.z += dt * 0.9;
       sparkles(time);
+    },
+    setLowDetail: () => {
+      for (const d of decor) d.visible = false;
     },
   };
 }
@@ -281,7 +304,12 @@ function addGatePosts(solid: Parts, pen: PenDef) {
   }
 }
 
-function addBarn(solid: Parts, faceted: Parts, pen: PenDef, addShadow: (x: number, z: number, rx: number, rz?: number) => void) {
+function addBarn(
+  solid: Parts,
+  faceted: Parts,
+  pen: PenDef,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
   const r = barnRect(pen);
   const sideways = pen.gate === 'left' || pen.gate === 'right';
   const W = sideways ? m(r.h) : m(r.w); // along the doors
@@ -335,12 +363,19 @@ function addBarn(solid: Parts, faceted: Parts, pen: PenDef, addShadow: (x: numbe
   const doorW = Math.min(2.0, W * 0.42);
   const doorH = 1.95;
   const fz = D / 2;
-  barn.add(shapes.box, PALETTE.white, { pos: [0, doorH / 2 + 0.05, fz + 0.03], scale: [doorW + 0.24, doorH + 0.2, 0.06] });
+  barn.add(shapes.box, PALETTE.white, {
+    pos: [0, doorH / 2 + 0.05, fz + 0.03],
+    scale: [doorW + 0.24, doorH + 0.2, 0.06],
+  });
   barn.add(shapes.box, PALETTE.barnDark, { pos: [0, doorH / 2 + 0.05, fz + 0.06], scale: [doorW, doorH, 0.06] });
   const diag = Math.hypot(doorW, doorH);
   const a = Math.atan2(doorH, doorW);
   for (const s of [-1, 1]) {
-    barn.add(shapes.box, PALETTE.white, { pos: [0, doorH / 2 + 0.05, fz + 0.1], rot: [0, 0, s * a], scale: [diag - 0.1, 0.13, 0.04] });
+    barn.add(shapes.box, PALETTE.white, {
+      pos: [0, doorH / 2 + 0.05, fz + 0.1],
+      rot: [0, 0, s * a],
+      scale: [diag - 0.1, 0.13, 0.04],
+    });
   }
   barn.add(shapes.box, PALETTE.white, { pos: [0, doorH / 2 + 0.05, fz + 0.1], scale: [0.1, doorH, 0.04] });
   // Hay loft window
@@ -374,14 +409,19 @@ function addBarn(solid: Parts, faceted: Parts, pen: PenDef, addShadow: (x: numbe
   const sx = cx - ox * back + (oz !== 0 ? side : 0);
   const sz = cz - oz * back + (ox !== 0 ? side : 0);
   solid.add(shapes.cylinder, '#D9DFE5', { pos: [sx, 2.2, sz], scale: [1, 4.4, 1] });
-  for (const y of [0.8, 1.9, 3.0, 4.0]) solid.add(shapes.cylinder, '#AFB8C1', { pos: [sx, y, sz], scale: [1.03, 0.12, 1.03] });
+  for (const y of [0.8, 1.9, 3.0, 4.0])
+    solid.add(shapes.cylinder, '#AFB8C1', { pos: [sx, y, sz], scale: [1.03, 0.12, 1.03] });
   solid.add(shapes.ball, PALETTE.barn, { pos: [sx, 4.4, sz], scale: [1.02, 0.7, 1.02] });
   addShadow(sx, sz, 1.5);
   // A few hay bales by the barn
   for (let i = 0; i < 3; i++) {
     const hx = cx - ox * (D / 2 + 0.9) - (oz !== 0 ? side - 0.2 + i * 0.9 : 0);
     const hz = cz - oz * (D / 2 + 0.9) - (ox !== 0 ? side - 0.2 + i * 0.9 : 0);
-    faceted.add(shapes.lowCylinder, PALETTE.hay, { pos: [hx, 0.35, hz], rot: [Math.PI / 2, 0, i], scale: [0.4, 0.7, 0.4] });
+    faceted.add(shapes.lowCylinder, PALETTE.hay, {
+      pos: [hx, 0.35, hz],
+      rot: [Math.PI / 2, 0, i],
+      scale: [0.4, 0.7, 0.4],
+    });
   }
 }
 
@@ -417,7 +457,11 @@ function addWindmill(
   blades.add(shapes.ball, '#5A3A24', { scale: 0.25 });
   for (let i = 0; i < 4; i++) {
     const ang = (i / 4) * Math.PI * 2;
-    blades.add(shapes.box, '#8A5A33', { pos: [Math.cos(ang) * 1.3, Math.sin(ang) * 1.3, 0], rot: [0, 0, ang], scale: [2.6, 0.1, 0.06] });
+    blades.add(shapes.box, '#8A5A33', {
+      pos: [Math.cos(ang) * 1.3, Math.sin(ang) * 1.3, 0],
+      rot: [0, 0, ang],
+      scale: [2.6, 0.1, 0.06],
+    });
     blades.add(shapes.box, '#FFFFFF', {
       pos: [Math.cos(ang) * 1.6 - Math.sin(ang) * 0.22, Math.sin(ang) * 1.6 + Math.cos(ang) * 0.22, 0.02],
       rot: [0, 0, ang],
@@ -429,7 +473,12 @@ function addWindmill(
   return hub;
 }
 
-function addBridge(solid: Parts, level: LevelDef, b: Rect, addShadow: (x: number, z: number, rx: number, rz?: number) => void) {
+function addBridge(
+  solid: Parts,
+  level: LevelDef,
+  b: Rect,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
   const vertical = bridgeIsVertical(level, b);
   const cx = m(b.x + b.w / 2);
   const cz = m(b.y + b.h / 2);
@@ -446,7 +495,12 @@ function addBridge(solid: Parts, level: LevelDef, b: Rect, addShadow: (x: number
   addShadow(cx, cz, vertical ? width / 2 + 0.2 : span / 2, vertical ? span / 2 : width / 2 + 0.2);
 }
 
-function addBush(faceted: Parts, b: Circle, rng: () => number, addShadow: (x: number, z: number, rx: number, rz?: number) => void) {
+function addBush(
+  faceted: Parts,
+  b: Circle,
+  rng: () => number,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
   const x = m(b.x);
   const z = m(b.y);
   const r = m(b.r);
@@ -470,18 +524,30 @@ function addBush(faceted: Parts, b: Circle, rng: () => number, addShadow: (x: nu
   }
 }
 
-function addRock(faceted: Parts, c: Circle, rng: () => number, addShadow: (x: number, z: number, rx: number, rz?: number) => void) {
+function addRock(
+  faceted: Parts,
+  c: Circle,
+  rng: () => number,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
   const x = m(c.x);
   const z = m(c.y);
   const r = m(c.r);
   addShadow(x + 0.1, z + 0.15, r * 1.2);
-  faceted.add(shapes.rock, PALETTE.rock, { pos: [x, r * 0.35, z], rot: [rng(), rng() * 3, 0], scale: [r, r * 0.75, r * 0.9] });
+  faceted.add(shapes.rock, PALETTE.rock, {
+    pos: [x, r * 0.35, z],
+    rot: [rng(), rng() * 3, 0],
+    scale: [r, r * 0.75, r * 0.9],
+  });
   faceted.add(shapes.rock, PALETTE.rockDark, {
     pos: [x + r * 0.6, r * 0.2, z + r * 0.4],
     rot: [rng(), rng() * 3, 0],
     scale: [r * 0.45, r * 0.4, r * 0.45],
   });
-  faceted.add(shapes.lowBall, '#7FBF5A', { pos: [x - r * 0.2, r * 0.68, z - r * 0.1], scale: [r * 0.4, r * 0.12, r * 0.35] });
+  faceted.add(shapes.lowBall, '#7FBF5A', {
+    pos: [x - r * 0.2, r * 0.68, z - r * 0.1],
+    scale: [r * 0.4, r * 0.12, r * 0.35],
+  });
 }
 
 function addHay(solid: Parts, c: Circle, addShadow: (x: number, z: number, rx: number, rz?: number) => void) {
@@ -491,10 +557,17 @@ function addHay(solid: Parts, c: Circle, addShadow: (x: number, z: number, rx: n
   addShadow(x + 0.1, z + 0.15, r * 1.25);
   solid.add(shapes.cylinder, PALETTE.hay, { pos: [x, 0.45, z], scale: [r, 0.9, r] });
   solid.add(shapes.cylinder, '#F2D27A', { pos: [x, 0.91, z], scale: [r * 0.75, 0.02, r * 0.75] });
-  for (const y of [0.25, 0.65]) solid.add(shapes.cylinder, PALETTE.hayDark, { pos: [x, y, z], scale: [r * 1.02, 0.06, r * 1.02] });
+  for (const y of [0.25, 0.65])
+    solid.add(shapes.cylinder, PALETTE.hayDark, { pos: [x, y, z], scale: [r * 1.02, 0.06, r * 1.02] });
 }
 
-function addTree(faceted: Parts, x: number, z: number, rng: () => number, addShadow: (x: number, z: number, rx: number, rz?: number) => void) {
+function addTree(
+  faceted: Parts,
+  x: number,
+  z: number,
+  rng: () => number,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
   const s = 0.8 + rng() * 0.7;
   addShadow(x + 0.4, z + 0.5, 1.5 * s);
   if (rng() < 0.4) {
@@ -517,7 +590,10 @@ function addTree(faceted: Parts, x: number, z: number, rng: () => number, addSha
     if (rng() < 0.4) {
       for (let i = 0; i < 4; i++) {
         const a = rng() * Math.PI * 2;
-        faceted.add(shapes.ball, '#E53950', { pos: [x + Math.cos(a) * 1.05 * s, 2.1 * s + rng() * 0.5, z + Math.sin(a) * 1.05 * s], scale: 0.12 });
+        faceted.add(shapes.ball, '#E53950', {
+          pos: [x + Math.cos(a) * 1.05 * s, 2.1 * s + rng() * 0.5, z + Math.sin(a) * 1.05 * s],
+          scale: 0.12,
+        });
       }
     }
   }
@@ -558,7 +634,8 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
   const blocked = (x: number, z: number) => {
     const wx = x * UNITS_PER_METER;
     const wy = z * UNITS_PER_METER;
-    const inRect = (r: Rect, pad: number) => wx > r.x - pad && wx < r.x + r.w + pad && wy > r.y - pad && wy < r.y + r.h + pad;
+    const inRect = (r: Rect, pad: number) =>
+      wx > r.x - pad && wx < r.x + r.w + pad && wy > r.y - pad && wy < r.y + r.h + pad;
     if (level.water.some((r) => inRect(r, 8))) return true;
     if (inRect(level.pen, 4) || inRect(barnRect(level.pen), 10)) return true;
     return false;
@@ -577,15 +654,26 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
     });
   }
   const tuftCount = Math.round((W * H) / 3.2) + 260;
-  const tufts = new THREE.InstancedMesh(tuft.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true }), tuftCount);
+  const tufts = new THREE.InstancedMesh(
+    tuft.geometry(),
+    new THREE.MeshLambertMaterial({ vertexColors: true }),
+    tuftCount,
+  );
   const flower = new Parts();
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    flower.add(shapes.ball, '#FFFFFF', { pos: [Math.cos(a) * 0.06, 0.06, Math.sin(a) * 0.06], scale: [0.05, 0.025, 0.05] });
+    flower.add(shapes.ball, '#FFFFFF', {
+      pos: [Math.cos(a) * 0.06, 0.06, Math.sin(a) * 0.06],
+      scale: [0.05, 0.025, 0.05],
+    });
   }
   flower.add(shapes.ball, '#FFD23F', { pos: [0, 0.075, 0], scale: [0.035, 0.025, 0.035] });
   const flowerCount = Math.round((W * H) / 9) + 80;
-  const flowers = new THREE.InstancedMesh(flower.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true }), flowerCount);
+  const flowers = new THREE.InstancedMesh(
+    flower.geometry(),
+    new THREE.MeshLambertMaterial({ vertexColors: true }),
+    flowerCount,
+  );
   const colors = ['#FFFFFF', '#FFE066', '#FF9AA2', '#D7A6F0', '#9AD0FF'].map((c) => new THREE.Color(c));
 
   const matrix = new THREE.Matrix4();
@@ -611,4 +699,5 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
   place(tufts, tuftCount, 0.7, 1.5);
   place(flowers, flowerCount, 0.8, 1.4, true);
   group.add(tufts, flowers);
+  return [tufts, flowers];
 }

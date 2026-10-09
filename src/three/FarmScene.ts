@@ -66,16 +66,28 @@ export class FarmScene {
     shape.lineTo(-0.22, 0);
     shape.lineTo(-0.5, 0);
     shape.closePath();
-    const arrowGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.14, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 2 });
+    const arrowGeo = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.14,
+      bevelEnabled: true,
+      bevelSize: 0.04,
+      bevelThickness: 0.04,
+      bevelSegments: 2,
+    });
     arrowGeo.center();
     arrowGeo.rotateX(-Math.PI / 2); // lie flat, tip towards -Z
-    this.arrow = new THREE.Mesh(arrowGeo, new THREE.MeshLambertMaterial({ color: '#FFD23F', emissive: '#FF9F1C', emissiveIntensity: 0.35 }));
+    this.arrow = new THREE.Mesh(
+      arrowGeo,
+      new THREE.MeshLambertMaterial({ color: '#FFD23F', emissive: '#FF9F1C', emissiveIntensity: 0.35 }),
+    );
     this.scene.add(this.arrow);
 
     // Ring under the finger.
     const ringGeo = new THREE.RingGeometry(0.42, 0.58, 32);
     ringGeo.rotateX(-Math.PI / 2);
-    this.ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.85, depthWrite: false }));
+    this.ring = new THREE.Mesh(
+      ringGeo,
+      new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.85, depthWrite: false }),
+    );
     this.ring.visible = false;
     this.scene.add(this.ring);
   }
@@ -180,7 +192,11 @@ export class FarmScene {
     const gz = m(pen.y + pen.h / 2) + (oz * m(pen.h)) / 2;
     const bob = Math.sin(this.time * 4) * 0.25;
     this.arrow.visible = world.status === 'playing' && this.mode === 'follow';
-    this.arrow.position.set(gx + ox * (1.6 + bob), 0.9 + Math.abs(Math.sin(this.time * 4)) * 0.3, gz + oz * (1.6 + bob));
+    this.arrow.position.set(
+      gx + ox * (1.6 + bob),
+      0.9 + Math.abs(Math.sin(this.time * 4)) * 0.3,
+      gz + oz * (1.6 + bob),
+    );
     this.arrow.rotation.set(0, FACING[pen.gate], 0);
     this.arrow.rotateX(0.35);
   }
@@ -223,7 +239,11 @@ export class FarmScene {
   }
 
   private heartGeometry: THREE.BufferGeometry | null = null;
-  private heartMaterial = new THREE.MeshLambertMaterial({ color: '#FF4F7E', emissive: '#C2185B', emissiveIntensity: 0.3 });
+  private heartMaterial = new THREE.MeshLambertMaterial({
+    color: '#FF4F7E',
+    emissive: '#C2185B',
+    emissiveIntensity: 0.3,
+  });
   private popRingGeometry = new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2);
 
   private makePop(x: number, z: number): Pop {
@@ -232,7 +252,13 @@ export class FarmScene {
       s.moveTo(0, -0.9);
       s.bezierCurveTo(-1.6, 0.1, -0.7, 1.3, 0, 0.5);
       s.bezierCurveTo(0.7, 1.3, 1.6, 0.1, 0, -0.9);
-      const g = new THREE.ExtrudeGeometry(s, { depth: 0.35, bevelEnabled: true, bevelSize: 0.12, bevelThickness: 0.12, bevelSegments: 2 });
+      const g = new THREE.ExtrudeGeometry(s, {
+        depth: 0.35,
+        bevelEnabled: true,
+        bevelSize: 0.12,
+        bevelThickness: 0.12,
+        bevelSegments: 2,
+      });
       g.center();
       this.heartGeometry = g;
     }
@@ -284,8 +310,10 @@ export class FarmScene {
     }
     desired.set(m(fx), 0, m(fy));
 
-    const halfW = this.distance * Math.tan(Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect));
-    const clampAxis = (v: number, size: number, half: number) => (size <= half * 2 ? size / 2 : THREE.MathUtils.clamp(v, half - 1.5, size - half + 1.5));
+    const halfW =
+      this.distance * Math.tan(Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect));
+    const clampAxis = (v: number, size: number, half: number) =>
+      size <= half * 2 ? size / 2 : THREE.MathUtils.clamp(v, half - 1.5, size - half + 1.5);
     desired.x = clampAxis(desired.x, W, halfW);
     desired.z = clampAxis(desired.z, H, halfW * 1.1);
 
@@ -298,6 +326,11 @@ export class FarmScene {
     const t = this.camTarget;
     this.camera.position.set(t.x, Math.sin(PITCH) * this.distance, t.z + Math.cos(PITCH) * this.distance);
     this.camera.lookAt(t.x, 0, t.z);
+  }
+
+  /** Less decoration, for phones that can't keep up. */
+  setLowDetail() {
+    this.farm.setLowDetail();
   }
 
   dispose() {

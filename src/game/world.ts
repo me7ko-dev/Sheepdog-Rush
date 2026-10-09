@@ -70,16 +70,15 @@ export function bridgeIsVertical(level: LevelDef, b: Rect): boolean {
 export function bridgeRails(level: LevelDef): Rect[] {
   const rails: Rect[] = [];
   for (const b of level.bridges) {
-    const sides: Rect[] =
-      bridgeIsVertical(level, b)
-        ? [
-            { x: b.x, y: b.y, w: RAIL, h: b.h },
-            { x: b.x + b.w - RAIL, y: b.y, w: RAIL, h: b.h },
-          ]
-        : [
-            { x: b.x, y: b.y, w: b.w, h: RAIL },
-            { x: b.x, y: b.y + b.h - RAIL, w: b.w, h: RAIL },
-          ];
+    const sides: Rect[] = bridgeIsVertical(level, b)
+      ? [
+          { x: b.x, y: b.y, w: RAIL, h: b.h },
+          { x: b.x + b.w - RAIL, y: b.y, w: RAIL, h: b.h },
+        ]
+      : [
+          { x: b.x, y: b.y, w: b.w, h: RAIL },
+          { x: b.x, y: b.y + b.h - RAIL, w: b.w, h: RAIL },
+        ];
     for (const side of sides) {
       for (const w of level.water) {
         const part = intersect(side, w);
@@ -127,11 +126,7 @@ export function createWorld(level: LevelDef): World {
   const blocked = (x: number, y: number) => {
     const pad = SHEEP_R + 4;
     const near = (r: Rect) => pointInRect(x, y, { x: r.x - pad, y: r.y - pad, w: r.w + 2 * pad, h: r.h + 2 * pad });
-    return (
-      walls.some(near) ||
-      water.some(near) ||
-      circles.some((b) => Math.hypot(x - b.x, y - b.y) < b.r + pad)
-    );
+    return walls.some(near) || water.some(near) || circles.some((b) => Math.hypot(x - b.x, y - b.y) < b.r + pad);
   };
 
   const sheep: Sheep[] = [];

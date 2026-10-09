@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { sound } from '../audio/sound';
 import { theme, type ButtonColor } from '../theme';
 
 type Props = {
@@ -20,7 +21,12 @@ export function Button({ title, onPress, color = 'green', size = 'normal', style
   return (
     <Animated.View style={[animated, style]}>
       <Pressable
-        onPress={onPress}
+        onPress={() => {
+          sound.play('click');
+          onPress();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={title}
         onPressIn={() => scale.set(withSpring(0.93, { damping: 15, stiffness: 400 }))}
         onPressOut={() => scale.set(withSpring(1, { damping: 10, stiffness: 300 }))}
         style={[

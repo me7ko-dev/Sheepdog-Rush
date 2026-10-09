@@ -105,7 +105,9 @@ export type World = {
 };
 
 export type GameEvent =
-  | { type: 'penned'; x: number; y: number }
+  | { type: 'penned'; x: number; y: number; black: boolean }
+  | { type: 'scared'; black: boolean }
+  | { type: 'wolfScared' }
   | { type: 'wolf' }
   | { type: 'won' }
   | { type: 'lost'; reason: LoseReason };

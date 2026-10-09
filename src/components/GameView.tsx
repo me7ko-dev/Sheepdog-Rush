@@ -1,21 +1,29 @@
-import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type * as THREE from 'three';
 
+import { haptics } from '../audio/haptics';
+import { sound } from '../audio/sound';
 import { aimDog, releaseDog, resultStars, stepWorld } from '../game/simulation';
 import type { LevelDef, World } from '../game/types';
 import { createWorld } from '../game/world';
 import { FarmScene } from '../three/FarmScene';
 import { ThreeView } from '../three/ThreeView';
+import { useI18n } from '../i18n';
 import { Minimap } from './Minimap';
 
 // Which 3D scene shows which world (used to turn touches into meadow positions).
 const scenes = new WeakMap<World, FarmScene>();
 
 export type Hud = { timeLeft: number; penned: number; total: number; started: boolean };
-export type GameResult = { won: boolean; stars: number; time: number; sheepLeft: number; reason: 'time' | 'wolf' | null };
+export type GameResult = {
+  won: boolean;
+  stars: number;
+  time: number;
+  sheepLeft: number;
+  reason: 'time' | 'wolf' | null;
+};
 
 type Props = {
   level: LevelDef;
@@ -30,6 +38,7 @@ type Props = {
  * To restart a level, give this component a new `key` (a fresh world is created on mount).
  */
 export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
+  const { t } = useI18n();
   const [world] = useState(() => createWorld(level));
   const [mapTick, setMapTick] = useState(0);
   const callbacks = useRef({ onHud, onEnd, onWolf });
@@ -54,9 +63,16 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
       frame: (renderer: THREE.WebGLRenderer, dt: number) => {
         const events = stepWorld(world, dt);
         for (const e of events) {
-          if (e.type === 'penned') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          if (e.type === 'penned') {
+            haptics.tap();
+            sound.play('pen');
+            sound.baa(e.black, 0.8);
+          }
+          if (e.type === 'scared') sound.baa(e.black);
+          if (e.type === 'wolfScared') sound.playLimited('bark', 'bark', 1500);
           if (e.type === 'wolf') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            haptics.warning();
+            sound.play('howl');
             callbacks.current.onWolf();
           }
           if (e.type === 'won' || e.type === 'lost') {
@@ -67,9 +83,9 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
               sheepLeft: world.sheep.filter((s) => !s.penned).length,
               reason: e.type === 'lost' ? e.reason : null,
             };
-            Haptics.notificationAsync(
-              result.won ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
-            ).catch(() => {});
+            if (result.won) haptics.success();
+            else haptics.error();
+            sound.play(result.won ? 'win' : 'lose');
             // Short pause so the player sees the last sheep go in.
             endTimer = setTimeout(() => callbacks.current.onEnd(result), 900);
           }
@@ -97,6 +113,7 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
         renderer.render(scene.scene, scene.camera);
       },
       resize: (width: number, height: number) => scene.resize(width, height),
+      onSlow: () => scene.setLowDetail(),
       dispose: () => {
         if (endTimer) clearTimeout(endTimer);
         scene.dispose();
@@ -113,7 +130,10 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
     return Gesture.Pan()
       .runOnJS(true)
       .minDistance(0)
-      .onBegin((e) => aim(e.x, e.y))
+      .onBegin((e) => {
+        sound.dogSentOff();
+        aim(e.x, e.y);
+      })
       .onUpdate((e) => aim(e.x, e.y))
       .onFinalize(() => releaseDog(world));
   }, [world]);
@@ -122,7 +142,15 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
     <View style={styles.fill}>
       <GestureDetector gesture={gesture}>
         <View style={styles.fill} collapsable={false}>
-          <ThreeView create={create} active={!paused} />
+          <ThreeView
+            create={create}
+            active={!paused}
+            fallback={
+              <View style={styles.error}>
+                <Text style={styles.errorText}>{t('gfxError')}</Text>
+              </View>
+            }
+          />
         </View>
       </GestureDetector>
       <Minimap world={world} tick={mapTick} />
@@ -132,4 +160,6 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  error: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#7BC950' },
+  errorText: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' },
 });

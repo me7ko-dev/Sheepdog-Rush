@@ -59,6 +59,7 @@ export function MenuBackground({ active = true }: { active?: boolean }) {
         renderer.render(scene.scene, scene.camera);
       },
       resize: (w: number, h: number) => scene.resize(w, h),
+      onSlow: () => scene.setLowDetail(),
       dispose: () => scene.dispose(),
     };
   }, [world]);

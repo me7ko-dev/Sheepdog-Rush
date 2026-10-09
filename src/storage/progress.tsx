@@ -17,6 +17,8 @@ type ProgressValue = {
   /** Saves a finished level. Keeps the best result. */
   recordWin: (levelId: number, stars: number) => void;
   totalStars: number;
+  /** Deletes all stars (from the settings screen). */
+  resetProgress: () => void;
 };
 
 const ProgressContext = createContext<ProgressValue | null>(null);
@@ -54,11 +56,16 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const resetProgress = useCallback(() => {
+    setProgress({ stars: {} });
+    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+  }, []);
+
   const totalStars = useMemo(() => Object.values(progress.stars).reduce((a, b) => a + b, 0), [progress]);
 
   const value = useMemo(
-    () => ({ loaded, starsFor, isUnlocked, recordWin, totalStars }),
-    [loaded, starsFor, isUnlocked, recordWin, totalStars],
+    () => ({ loaded, starsFor, isUnlocked, recordWin, totalStars, resetProgress }),
+    [loaded, starsFor, isUnlocked, recordWin, totalStars, resetProgress],
   );
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
 }

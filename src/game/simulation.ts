@@ -33,8 +33,13 @@ export function stepWorld(world: World, dt: number): GameEvent[] {
   updateDog(world, dt);
   if (world.wolf) updateWolf(world, world.wolf, dt, events);
   for (const s of world.sheep) {
-    if (s.penned) updatePennedSheep(world, s, dt);
-    else updateFreeSheep(world, s, dt);
+    if (s.penned) {
+      updatePennedSheep(world, s, dt);
+    } else {
+      const before = s.panic;
+      updateFreeSheep(world, s, dt);
+      if (before < 0.5 && s.panic >= 0.5) events.push({ type: 'scared', black: s.black });
+    }
   }
   separateSheep(world);
   const { w, h } = world.size;
@@ -54,7 +59,7 @@ export function stepWorld(world: World, dt: number): GameEvent[] {
       s.panic = 0;
       s.goal = randomPenPoint(world);
       world.effects.push({ x: s.x, y: s.y, age: 0 });
-      events.push({ type: 'penned', x: s.x, y: s.y });
+      events.push({ type: 'penned', x: s.x, y: s.y, black: s.black });
     }
   }
 
@@ -143,7 +148,10 @@ function updateWolf(world: World, wolf: Wolf, dt: number, events: GameEvent[]) {
   const ddx = wolf.x - dog.x;
   const ddy = wolf.y - dog.y;
   const dDog = Math.hypot(ddx, ddy) || 0.001;
-  if (dDog < WOLF_SCARED_RADIUS) wolf.fleeing = WOLF_FLEE_TIME;
+  if (dDog < WOLF_SCARED_RADIUS) {
+    if (wolf.fleeing <= 0) events.push({ type: 'wolfScared' });
+    wolf.fleeing = WOLF_FLEE_TIME;
+  }
 
   let wantX = 0;
   let wantY = 0;

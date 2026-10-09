@@ -91,7 +91,11 @@ export function blobGeometry(): THREE.BufferGeometry {
   const segments = 24;
   const positions: number[] = [];
   const colors: number[] = [];
-  const ring = (r: number) => (i: number) => [Math.cos((i / segments) * Math.PI * 2) * r, 0, Math.sin((i / segments) * Math.PI * 2) * r];
+  const ring = (r: number) => (i: number) => [
+    Math.cos((i / segments) * Math.PI * 2) * r,
+    0,
+    Math.sin((i / segments) * Math.PI * 2) * r,
+  ];
   const inner = ring(0.55);
   const outer = ring(1);
   for (let i = 0; i < segments; i++) {

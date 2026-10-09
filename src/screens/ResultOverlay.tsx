@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 
+import { sound } from '../audio/sound';
 import { Button } from '../components/Button';
+import { Confetti } from '../components/Confetti';
 import { BigStar } from '../components/Icons';
 import type { GameResult } from '../components/GameView';
 import { useI18n } from '../i18n';
@@ -24,8 +27,18 @@ export function formatTime(seconds: number): string {
 export function ResultOverlay({ result, hasNext, onRetry, onNext, onMenu }: Props) {
   const { t } = useI18n();
 
+  // A "ding" for every star, in time with the stars popping in.
+  useEffect(() => {
+    if (!result.won) return;
+    const timers = Array.from({ length: result.stars }, (_, i) =>
+      setTimeout(() => sound.play('star', 0.8 + i * 0.1), 450 + i * 280),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [result]);
+
   return (
     <Animated.View entering={FadeIn.duration(250)} style={styles.backdrop}>
+      {result.won && <Confetti />}
       <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.card}>
         <Text style={[styles.title, !result.won && styles.titleLose]}>
           {result.won ? t('winTitle') : result.reason === 'wolf' ? t('wolfTitle') : t('loseTitle')}
@@ -37,7 +50,9 @@ export function ResultOverlay({ result, hasNext, onRetry, onNext, onMenu }: Prop
               {[0, 1, 2].map((i) => (
                 <Animated.View
                   key={i}
-                  entering={ZoomIn.delay(350 + i * 280).springify().damping(9)}
+                  entering={ZoomIn.delay(350 + i * 280)
+                    .springify()
+                    .damping(9)}
                   style={i === 1 && styles.middleStar}
                 >
                   <BigStar on={i < result.stars} size={i === 1 ? 76 : 62} />

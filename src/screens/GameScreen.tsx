@@ -2,10 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeepAwake } from 'expo-keep-awake';
 
+import { sound } from '../audio/sound';
 import { Button } from '../components/Button';
 import { GameView, type GameResult, type Hud } from '../components/GameView';
 import { SheepIcon } from '../components/Icons';
+import { SettingsSheet } from '../components/SettingsSheet';
+import { TutorialHand } from '../components/TutorialHand';
 import { getLevel, LEVELS } from '../game/levels';
 import { useI18n } from '../i18n';
 import { ads } from '../monetization/ads';
@@ -24,6 +28,9 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
   const { t } = useI18n();
   const { recordWin } = useProgress();
   const insets = useSafeAreaInsets();
+  // Don't let the screen go dark while herding.
+  useKeepAwake();
+  const [showSettings, setShowSettings] = useState(false);
 
   const [runKey, setRunKey] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -82,7 +89,16 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
   return (
     <View style={styles.container}>
       <View style={[styles.hud, { paddingTop: insets.top + 6 }]}>
-        <Pressable onPress={() => setPaused(true)} style={styles.pauseButton} hitSlop={10}>
+        <Pressable
+          onPress={() => {
+            sound.play('click');
+            setPaused(true);
+          }}
+          style={styles.pauseButton}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('paused')}
+        >
           <View style={styles.pauseBar} />
           <View style={styles.pauseBar} />
         </Pressable>
@@ -104,14 +120,7 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
       </View>
 
       <View style={styles.field}>
-        <GameView
-          key={runKey}
-          level={level}
-          paused={paused || !!result}
-          onHud={setHud}
-          onEnd={onEnd}
-          onWolf={onWolf}
-        />
+        <GameView key={runKey} level={level} paused={paused || !!result} onHud={setHud} onEnd={onEnd} onWolf={onWolf} />
 
         {!hud.started && !result && (
           <Animated.View
@@ -124,6 +133,8 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
             {level.blackSheep > 0 && <Text style={styles.hintSub}>{t('hintBlack')}</Text>}
           </Animated.View>
         )}
+
+        {!hud.started && !result && level.id === 1 && <TutorialHand bottom={insets.bottom + 150} />}
 
         {wolfAlert && !result && (
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut} style={styles.wolfAlert}>
@@ -138,10 +149,14 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
             <Text style={styles.pauseTitle}>{t('paused')}</Text>
             <Button title={t('resume')} onPress={() => setPaused(false)} color="green" size="big" />
             <Button title={t('restart')} onPress={restart} color="orange" />
-            <Button title={t('levels')} onPress={onExit} color="blue" size="small" />
+            <View style={styles.pauseRow}>
+              <Button title={t('levels')} onPress={onExit} color="blue" size="small" />
+              <Button title={t('settings')} onPress={() => setShowSettings(true)} color="blue" size="small" />
+            </View>
           </View>
         </Animated.View>
       )}
+      {paused && !result && showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
 
       {result && (
         <ResultOverlay
@@ -242,5 +257,6 @@ const styles = StyleSheet.create({
     gap: 14,
     minWidth: 270,
   },
+  pauseRow: { flexDirection: 'row', gap: 10 },
   pauseTitle: { fontSize: 34, fontWeight: '900', color: theme.text, marginBottom: 6 },
 });

@@ -24,11 +24,14 @@ export type Critter = {
 // ---------------------------------------------------------------- sheep
 
 const SHEEP_COLORS = {
-  white: { wool: '#FFFCF4', face: '#4B4049', inner: '#F6A9BC' },
+  white: { wool: '#FFFFFF', face: '#4B4049', inner: '#F6A9BC' },
   black: { wool: '#3B3742', face: '#1F1B23', inner: '#C98A9E' },
 };
 
-const sheepGeometry = new Map<string, { body: THREE.BufferGeometry; head: THREE.BufferGeometry; leg: THREE.BufferGeometry }>();
+const sheepGeometry = new Map<
+  string,
+  { body: THREE.BufferGeometry; head: THREE.BufferGeometry; leg: THREE.BufferGeometry }
+>();
 
 function buildSheepGeometry(kind: 'white' | 'black') {
   const cached = sheepGeometry.get(kind);
@@ -232,7 +235,11 @@ export function createCanine(style: CanineStyle): CanineCritter {
   const tail = new THREE.Group();
   tail.position.set(-0.4, 0.62, 0);
   const tailParts = new Parts();
-  tailParts.add(capsule, style.fur, { pos: [-0.17, 0, 0], rot: [0, 0, Math.PI / 2], scale: [style.tailFluff * 0.8, 0.12, style.tailFluff * 0.8] });
+  tailParts.add(capsule, style.fur, {
+    pos: [-0.17, 0, 0],
+    rot: [0, 0, Math.PI / 2],
+    scale: [style.tailFluff * 0.8, 0.12, style.tailFluff * 0.8],
+  });
   tailParts.add(ball, style.light, { pos: [-0.36, 0, 0], scale: style.tailFluff });
   tail.add(new THREE.Mesh(tailParts.geometry(), lambert));
   body.add(tail);

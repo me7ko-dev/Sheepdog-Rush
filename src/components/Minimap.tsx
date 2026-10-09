@@ -27,27 +27,30 @@ export function Minimap({ world, tick }: { world: World; tick: number }) {
 }
 
 function drawMap(world: World, _tick: number, height: number, scale: number, sy: number) {
-  return createPicture((c) => {
-        roundRect(c, 0, 0, MAP_WIDTH, height, 8, fill('#7BC950'));
-        c.save();
-        c.scale(scale, sy);
-        for (const r of world.water) c.drawRect(Skia.XYWHRect(r.x, r.y, r.w, r.h), fill('#47BDF5'));
-        for (const b of world.level.bridges) c.drawRect(Skia.XYWHRect(b.x, b.y, b.w, b.h), fill('#B98353'));
-        const inner = penInnerRect(world.level.pen);
-        c.drawRect(Skia.XYWHRect(inner.x, inner.y, inner.w, inner.h), fill('#F2DD98'));
-        const barn = barnRect(world.level.pen);
-        c.drawRect(Skia.XYWHRect(barn.x, barn.y, barn.w, barn.h), fill('#D9483A'));
-        c.restore();
+  return createPicture(
+    (c) => {
+      roundRect(c, 0, 0, MAP_WIDTH, height, 8, fill('#7BC950'));
+      c.save();
+      c.scale(scale, sy);
+      for (const r of world.water) c.drawRect(Skia.XYWHRect(r.x, r.y, r.w, r.h), fill('#47BDF5'));
+      for (const b of world.level.bridges) c.drawRect(Skia.XYWHRect(b.x, b.y, b.w, b.h), fill('#B98353'));
+      const inner = penInnerRect(world.level.pen);
+      c.drawRect(Skia.XYWHRect(inner.x, inner.y, inner.w, inner.h), fill('#F2DD98'));
+      const barn = barnRect(world.level.pen);
+      c.drawRect(Skia.XYWHRect(barn.x, barn.y, barn.w, barn.h), fill('#D9483A'));
+      c.restore();
 
-        const dot = (x: number, y: number, r: number, color: string, ring?: string) => {
-          c.drawCircle(x * scale, y * sy, r, fill(color));
-          if (ring) c.drawCircle(x * scale, y * sy, r, stroke(ring, 1));
-        };
-        for (const s of world.sheep) dot(s.x, s.y, 2.6, s.black ? '#2B2830' : '#FFFFFF', s.black ? '#FFFFFF' : '#6B6B6B');
-        if (world.wolf?.active) dot(world.wolf.x, world.wolf.y, 3.4, '#E53935', '#FFFFFF');
-        dot(world.dog.x, world.dog.y, 3.4, '#FFC531', '#3A2A10');
-        roundRect(c, 0.75, 0.75, MAP_WIDTH - 1.5, height - 1.5, 8, stroke('#FFFFFF', 1.5));
-  }, Skia.XYWHRect(0, 0, MAP_WIDTH, height));
+      const dot = (x: number, y: number, r: number, color: string, ring?: string) => {
+        c.drawCircle(x * scale, y * sy, r, fill(color));
+        if (ring) c.drawCircle(x * scale, y * sy, r, stroke(ring, 1));
+      };
+      for (const s of world.sheep) dot(s.x, s.y, 2.6, s.black ? '#2B2830' : '#FFFFFF', s.black ? '#FFFFFF' : '#6B6B6B');
+      if (world.wolf?.active) dot(world.wolf.x, world.wolf.y, 3.4, '#E53935', '#FFFFFF');
+      dot(world.dog.x, world.dog.y, 3.4, '#FFC531', '#3A2A10');
+      roundRect(c, 0.75, 0.75, MAP_WIDTH - 1.5, height - 1.5, 8, stroke('#FFFFFF', 1.5));
+    },
+    Skia.XYWHRect(0, 0, MAP_WIDTH, height),
+  );
 }
 
 const styles = StyleSheet.create({
