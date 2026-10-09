@@ -1,5 +1,5 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { settings } from '../storage/settings';
 
@@ -51,7 +51,8 @@ class SoundSystem {
       this.appActive = s === 'active';
       this.updateMusic();
     });
-    this.updateMusic();
+    // Browsers only allow sound after the first tap; on phones the music starts right away.
+    if (Platform.OS !== 'web') this.updateMusic();
   }
 
   play(name: SoundName, volume = 1) {

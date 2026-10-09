@@ -61,8 +61,8 @@ export function ThreeView({ create, active, style, fallback }: Props) {
       const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
       r.outputColorSpace = THREE.SRGBColorSpace;
       r.toneMapping = THREE.NoToneMapping;
-      const pixelRatio =
-        Platform.OS === 'web' ? Math.min(2, window.devicePixelRatio || 1) : context.drawingBufferWidth / width;
+      // Match three.js to the real size of the drawing surface (expo-gl and browsers decide it).
+      const pixelRatio = context.drawingBufferWidth / width;
       r.setPixelRatio(pixelRatio);
       r.setSize(width, height, false);
       renderer.current = r;
