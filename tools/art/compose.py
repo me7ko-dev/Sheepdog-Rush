@@ -1,5 +1,5 @@
 """
-Turns the 3D renders from tools/art/render.js into the app's icon, splash and store images.
+Turns the 3D renders (made with tools/art/render.js) into the app's icon, splash and store images.
 Usage: python3 tools/art/compose.py <folder with icon-raw.png, icon-nohill.png, sheep-raw.png, banner-raw.png>
 """
 import os
