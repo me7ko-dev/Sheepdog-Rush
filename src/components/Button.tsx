@@ -14,15 +14,15 @@ type Props = {
 /** A chunky, bouncy cartoon button. */
 export function Button({ title, onPress, color = 'green', size = 'normal', style }: Props) {
   const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const c = theme.buttons[color];
 
   return (
     <Animated.View style={[animated, style]}>
       <Pressable
         onPress={onPress}
-        onPressIn={() => (scale.value = withSpring(0.93, { damping: 15, stiffness: 400 }))}
-        onPressOut={() => (scale.value = withSpring(1, { damping: 10, stiffness: 300 }))}
+        onPressIn={() => scale.set(withSpring(0.93, { damping: 15, stiffness: 400 }))}
+        onPressOut={() => scale.set(withSpring(1, { damping: 10, stiffness: 300 }))}
         style={[
           styles.button,
           size === 'big' && styles.big,

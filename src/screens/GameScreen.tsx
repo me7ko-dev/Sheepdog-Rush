@@ -4,7 +4,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
-import { GameCanvas, type GameResult, type Hud } from '../components/GameCanvas';
+import { GameView, type GameResult, type Hud } from '../components/GameView';
 import { SheepIcon } from '../components/Icons';
 import { getLevel, LEVELS } from '../game/levels';
 import { useI18n } from '../i18n';
@@ -28,6 +28,7 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
   const [runKey, setRunKey] = useState(0);
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<GameResult | null>(null);
+  const [wolfAlert, setWolfAlert] = useState(false);
   const [hud, setHud] = useState<Hud>({
     timeLeft: level.timeLimit,
     penned: 0,
@@ -35,8 +36,14 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
     started: false,
   });
 
+  const onWolf = useCallback(() => {
+    setWolfAlert(true);
+    setTimeout(() => setWolfAlert(false), 2600);
+  }, []);
+
   const restart = useCallback(() => {
     setResult(null);
+    setWolfAlert(false);
     setPaused(false);
     setHud({ timeLeft: level.timeLimit, penned: 0, total: level.sheepCount, started: false });
     setRunKey((k) => k + 1);
@@ -97,7 +104,14 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
       </View>
 
       <View style={styles.field}>
-        <GameCanvas level={level} runKey={runKey} paused={paused || !!result} onHud={setHud} onEnd={onEnd} />
+        <GameView
+          key={runKey}
+          level={level}
+          paused={paused || !!result}
+          onHud={setHud}
+          onEnd={onEnd}
+          onWolf={onWolf}
+        />
 
         {!hud.started && !result && (
           <Animated.View
@@ -107,6 +121,13 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
           >
             <Text style={styles.hintMain}>{t('hintDrag')}</Text>
             <Text style={styles.hintSub}>{t('hintGoal')}</Text>
+            {level.blackSheep > 0 && <Text style={styles.hintSub}>{t('hintBlack')}</Text>}
+          </Animated.View>
+        )}
+
+        {wolfAlert && !result && (
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut} style={styles.wolfAlert}>
+            <Text style={styles.wolfText}>{t('wolfWarning')}</Text>
           </Animated.View>
         )}
       </View>
@@ -197,6 +218,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  wolfAlert: {
+    position: 'absolute',
+    top: 16,
+    left: 20,
+    right: 96,
+    backgroundColor: theme.buttons.red.bg,
+    borderRadius: 16,
+    borderBottomWidth: 4,
+    borderColor: theme.buttons.red.edge,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    pointerEvents: 'none',
+  },
+  wolfText: { color: theme.white, fontSize: 16, fontWeight: '900', textAlign: 'center' },
   pauseCard: {
     backgroundColor: theme.cream,
     borderRadius: 30,

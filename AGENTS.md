@@ -26,7 +26,9 @@ Run lint and typecheck before declaring any task done.
 ## Project layout
 
 - This is a game, not an Expo Router app. `App.tsx` switches between screens with a tiny state navigator; screens live in `src/screens/`.
-- Game logic is plain TypeScript in `src/game/` (no React): `simulation.ts` steps the world, `render/` draws it into Skia pictures on the JS thread.
+- Game logic is plain TypeScript in `src/game/` (no React): `simulation.ts` steps the world (2D, world units; 20 units = 1 m).
+- 3D rendering is three.js on expo-gl in `src/three/` (`ThreeView` hands three.js a canvas stand-in for expo-gl). Models are built procedurally from primitives in `characters.ts` / `farm.ts`; no textures or model files, so it runs in Expo Go. Skia is only used for 2D UI bits (stars, icons, minimap).
+- Tests for game logic: compile `src/game` with `tsc` to CommonJS and drive `stepWorld` from Node. On web, `globalThis.__sheepdogWorld` exposes the running world for browser screenshot tests (`npm run web`).
 - Levels are data in `src/game/levels.ts`. User-facing text goes through `src/i18n` (`en.ts` + `bg.ts`).
 - Ads/purchases are no-op services in `src/monetization/`; the app must keep running in Expo Go.
 

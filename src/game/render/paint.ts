@@ -41,17 +41,6 @@ export function roundRect(c: SkCanvas, x: number, y: number, w: number, h: numbe
   c.drawRRect(Skia.RRectXY(Skia.XYWHRect(x, y, w, h), r, r), paint);
 }
 
-/** A little heart shape centred on (x, y). */
-export function heart(c: SkCanvas, x: number, y: number, size: number, paint: SkPaint) {
-  const s = size / 2;
-  const p = Skia.PathBuilder.Make();
-  p.moveTo(x, y + s);
-  p.cubicTo(x - s * 2, y - s * 0.2, x - s * 0.9, y - s * 1.6, x, y - s * 0.5);
-  p.cubicTo(x + s * 0.9, y - s * 1.6, x + s * 2, y - s * 0.2, x, y + s);
-  p.close();
-  c.drawPath(p.detach(), paint);
-}
-
 /** A five-pointed star centred on (x, y). */
 export function star(c: SkCanvas, x: number, y: number, outer: number, paint: SkPaint) {
   const inner = outer * 0.48;

@@ -1,4 +1,4 @@
-import { FENCE_THICKNESS, SHEEP_R } from './constants';
+import { BARN_DEPTH, FENCE_THICKNESS, SHEEP_R } from './constants';
 import { makeRng, pointInRect } from './math';
 import type { LevelDef, PenDef, Rect, Sheep, World } from './types';
 
@@ -90,6 +90,29 @@ export function bridgeRails(level: LevelDef): Rect[] {
   return rails;
 }
 
+/** The barn stands right behind the pen wall opposite the gate, doors facing the yard. */
+export function barnRect(pen: PenDef): Rect {
+  const D = BARN_DEPTH;
+  switch (pen.gate) {
+    case 'bottom': {
+      const w = pen.w * 0.86;
+      return { x: pen.x + (pen.w - w) / 2, y: pen.y - D, w, h: D };
+    }
+    case 'top': {
+      const w = pen.w * 0.86;
+      return { x: pen.x + (pen.w - w) / 2, y: pen.y + pen.h, w, h: D };
+    }
+    case 'left': {
+      const h = pen.h * 0.86;
+      return { x: pen.x + pen.w, y: pen.y + (pen.h - h) / 2, w: D, h };
+    }
+    case 'right': {
+      const h = pen.h * 0.86;
+      return { x: pen.x - D, y: pen.y + (pen.h - h) / 2, w: D, h };
+    }
+  }
+}
+
 export function penInnerRect(pen: PenDef): Rect {
   const T = FENCE_THICKNESS;
   return { x: pen.x + T, y: pen.y + T, w: pen.w - 2 * T, h: pen.h - 2 * T };
@@ -97,8 +120,9 @@ export function penInnerRect(pen: PenDef): Rect {
 
 export function createWorld(level: LevelDef): World {
   const rng = makeRng(level.seed);
-  const walls = [...level.fences, ...penWalls(level.pen), ...bridgeRails(level)];
+  const walls = [...level.fences, ...penWalls(level.pen), barnRect(level.pen), ...bridgeRails(level)];
   const water = solidWater(level);
+  const circles = [...level.bushes, ...level.rocks, ...level.hay];
 
   const blocked = (x: number, y: number) => {
     const pad = SHEEP_R + 4;
@@ -106,7 +130,7 @@ export function createWorld(level: LevelDef): World {
     return (
       walls.some(near) ||
       water.some(near) ||
-      level.bushes.some((b) => Math.hypot(x - b.x, y - b.y) < b.r + pad)
+      circles.some((b) => Math.hypot(x - b.x, y - b.y) < b.r + pad)
     );
   };
 
@@ -126,6 +150,8 @@ export function createWorld(level: LevelDef): World {
       }
     }
     sheep.push({
+      id: i,
+      black: false,
       x,
       y,
       vx: 0,
@@ -139,9 +165,29 @@ export function createWorld(level: LevelDef): World {
     });
   }
 
+  // Pick which sheep are black (spread through the flock).
+  const order = sheep.map((_, i) => i).sort(() => rng() - 0.5);
+  for (let i = 0; i < Math.min(level.blackSheep, sheep.length); i++) sheep[order[i]].black = true;
+
+  const wolf = level.wolf
+    ? {
+        x: level.wolf.x,
+        y: level.wolf.y,
+        vx: 0,
+        vy: 0,
+        heading: 0,
+        phase: 0,
+        active: false,
+        fleeing: 0,
+        appearAt: level.wolf.delay,
+      }
+    : null;
+
   return {
     level,
+    size: level.size,
     sheep,
+    wolf,
     dog: {
       x: level.dogStart.x,
       y: level.dogStart.y,
@@ -153,12 +199,14 @@ export function createWorld(level: LevelDef): World {
     target: null,
     touching: false,
     walls,
+    circles,
     water,
     penInner: penInnerRect(level.pen),
     started: false,
     elapsed: 0,
     clock: 0,
     status: 'playing',
+    loseReason: null,
     effects: [],
     rng,
   };

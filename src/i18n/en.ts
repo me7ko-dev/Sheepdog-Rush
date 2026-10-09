@@ -9,8 +9,8 @@ export const en = {
   back: 'Back',
   language: 'Language',
 
-  hintDrag: 'Drag your finger - the dog runs there!',
-  hintGoal: 'Push all sheep into the pen',
+  hintDrag: 'Hold and drag - the dog runs to your finger!',
+  hintGoal: 'Herd all sheep into the barn yard',
   paused: 'Paused',
   resume: 'Resume',
   restart: 'Restart',
@@ -23,11 +23,23 @@ export const en = {
   next: 'Next',
   retry: 'Try again',
   allDone: 'You finished all levels! More coming soon.',
-  comingSoon: 'More levels coming soon',
 
   level_1: 'First Steps',
   level_2: 'Bushy Meadow',
   level_3: 'River Crossing',
+  level_4: 'Hay Maze',
+  level_5: 'Two Bridges',
+  level_6: 'Rocky Hills',
+  level_7: 'River Bend',
+  level_8: 'The Wolf',
+  level_9: 'Wolf Woods',
+  level_10: 'Big Roundup',
+
+  wolfWarning: 'Watch out - a wolf! Chase it away!',
+  wolfTitle: 'Oh no!',
+  loseWolf: 'The wolf got too close to a sheep!',
+  hintBlack: 'Black sheep are stubborn - they like to wander off.',
+  loading: 'Loading the farm...',
 };
 
 export type StringKey = keyof typeof en;

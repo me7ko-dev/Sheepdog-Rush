@@ -3,7 +3,7 @@ import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 
 import { Button } from '../components/Button';
 import { BigStar } from '../components/Icons';
-import type { GameResult } from '../components/GameCanvas';
+import type { GameResult } from '../components/GameView';
 import { useI18n } from '../i18n';
 import { theme } from '../theme';
 
@@ -28,7 +28,7 @@ export function ResultOverlay({ result, hasNext, onRetry, onNext, onMenu }: Prop
     <Animated.View entering={FadeIn.duration(250)} style={styles.backdrop}>
       <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.card}>
         <Text style={[styles.title, !result.won && styles.titleLose]}>
-          {result.won ? t('winTitle') : t('loseTitle')}
+          {result.won ? t('winTitle') : result.reason === 'wolf' ? t('wolfTitle') : t('loseTitle')}
         </Text>
 
         {result.won ? (
@@ -48,7 +48,9 @@ export function ResultOverlay({ result, hasNext, onRetry, onNext, onMenu }: Prop
             {!hasNext && <Text style={styles.small}>{t('allDone')}</Text>}
           </>
         ) : (
-          <Text style={styles.info}>{t('loseText', { n: result.sheepLeft })}</Text>
+          <Text style={styles.info}>
+            {result.reason === 'wolf' ? t('loseWolf') : t('loseText', { n: result.sheepLeft })}
+          </Text>
         )}
 
         <View style={styles.buttons}>

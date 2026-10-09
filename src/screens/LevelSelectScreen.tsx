@@ -53,7 +53,10 @@ export function LevelSelectScreen({ onBack, onSelect }: { onBack: () => void; on
                     <StarRow filled={starsFor(level.id)} size={tileSize * 0.2} />
                   </>
                 ) : (
-                  <LockIcon size={tileSize * 0.34} />
+                  <>
+                    <LockIcon size={tileSize * 0.3} />
+                    <Text style={styles.lockedNumber}>{level.id}</Text>
+                  </>
                 )}
               </Pressable>
               <Text style={[styles.levelName, { width: tileSize }]} numberOfLines={1}>
@@ -62,7 +65,6 @@ export function LevelSelectScreen({ onBack, onSelect }: { onBack: () => void; on
             </Animated.View>
           );
         })}
-        <Text style={styles.soon}>{t('comingSoon')}</Text>
       </ScrollView>
     </View>
   );
@@ -114,19 +116,12 @@ const styles = StyleSheet.create({
   },
   tileLocked: { backgroundColor: '#E4DCCB', borderColor: '#C9BCA5' },
   number: { fontSize: 40, fontWeight: '900', color: theme.text },
+  lockedNumber: { fontSize: 18, fontWeight: '900', color: '#A89A84' },
   levelName: {
     marginTop: 4,
     textAlign: 'center',
     fontSize: 13,
     fontWeight: '700',
     color: theme.white,
-  },
-  soon: {
-    width: '100%',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 15,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.85)',
   },
 });
