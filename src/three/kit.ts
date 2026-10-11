@@ -79,6 +79,7 @@ export const shapes = {
   rock: new THREE.DodecahedronGeometry(1, 0),
   box: new THREE.BoxGeometry(1, 1, 1),
   cylinder: new THREE.CylinderGeometry(1, 1, 1, 12),
+  disc: new THREE.CylinderGeometry(1, 1, 1, 32),
   lowCylinder: new THREE.CylinderGeometry(1, 1, 1, 7),
   cone: new THREE.ConeGeometry(1, 1, 10),
   lowCone: new THREE.ConeGeometry(1, 1, 7),

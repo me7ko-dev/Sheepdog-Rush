@@ -27,3 +27,10 @@ export const SHEEP_WOLF_FEAR_RADIUS = 125;
 export const FENCE_THICKNESS = 6;
 /** How deep the barn is (it stands behind the pen). */
 export const BARN_DEPTH = 84;
+
+/** Bark: scares every sheep this close and chases the wolf away. */
+export const BARK_RADIUS = 150;
+export const BARK_WOLF_RADIUS = 240;
+export const BARK_COOLDOWN = 3.5;
+/** Speed in mud (1 = normal). */
+export const MUD_SPEED = 0.5;

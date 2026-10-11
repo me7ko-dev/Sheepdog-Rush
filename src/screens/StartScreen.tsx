@@ -11,7 +11,7 @@ import { SettingsSheet } from '../components/SettingsSheet';
 import { LANGUAGES, useI18n } from '../i18n';
 import { theme } from '../theme';
 
-export function StartScreen({ onPlay }: { onPlay: () => void }) {
+export function StartScreen({ onPlay, onKennel }: { onPlay: () => void; onKennel: () => void }) {
   const { t, language, setLanguage } = useI18n();
   const insets = useSafeAreaInsets();
   const [showSettings, setShowSettings] = useState(false);
@@ -26,8 +26,9 @@ export function StartScreen({ onPlay }: { onPlay: () => void }) {
           <Text style={styles.tagline}>{t('tagline')}</Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInUp.delay(300).duration(600).springify()}>
+        <Animated.View entering={FadeInUp.delay(300).duration(600).springify()} style={styles.buttons}>
           <Button title={t('play')} onPress={onPlay} size="big" color="orange" />
+          <Button title={t('kennel')} onPress={onKennel} color="blue" />
         </Animated.View>
 
         <View style={styles.bottomRow}>
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
   },
+  buttons: { alignItems: 'center', gap: 14 },
   bottomRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   gear: {
     width: 46,

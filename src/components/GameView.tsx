@@ -5,12 +5,13 @@ import type * as THREE from 'three';
 
 import { haptics } from '../audio/haptics';
 import { sound } from '../audio/sound';
-import { aimDog, releaseDog, resultStars, stepWorld } from '../game/simulation';
+import { aimDog, bark, releaseDog, resultStars, stepWorld } from '../game/simulation';
 import type { LevelDef, World } from '../game/types';
 import { createWorld } from '../game/world';
 import { FarmScene } from '../three/FarmScene';
 import { ThreeView } from '../three/ThreeView';
 import { useI18n } from '../i18n';
+import { BarkButton } from './BarkButton';
 import { Minimap } from './Minimap';
 
 // Which 3D scene shows which world (used to turn touches into meadow positions).
@@ -154,6 +155,18 @@ export function GameView({ level, paused, onHud, onEnd, onWolf }: Props) {
         </View>
       </GestureDetector>
       <Minimap world={world} tick={mapTick} />
+      <BarkButton
+        world={world}
+        tick={mapTick}
+        onPress={() => {
+          if (paused) return;
+          if (bark(world)) {
+            sound.play('bark');
+            haptics.tap();
+            setMapTick((t) => t + 1);
+          }
+        }}
+      />
     </View>
   );
 }

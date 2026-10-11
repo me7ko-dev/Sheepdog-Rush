@@ -4,6 +4,7 @@ export type Vec = { x: number; y: number };
 export type Rect = { x: number; y: number; w: number; h: number };
 export type Circle = { x: number; y: number; r: number };
 export type Side = 'top' | 'bottom' | 'left' | 'right';
+export type Theme = 'spring' | 'autumn';
 
 /** The barn yard (кошара): a fenced rectangle with an opening (gate) on one side.
  *  The barn itself stands right behind the side opposite the gate. */
@@ -31,6 +32,10 @@ export type LevelDef = {
   bridges: Rect[];
   /** A wolf runs in from (x, y) `delay` seconds after the start. */
   wolf?: { x: number; y: number; delay: number };
+  /** Muddy puddles: everyone walks at half speed in them. */
+  mud?: Circle[];
+  /** Look of the farm. Default: spring. */
+  theme?: Theme;
   /** Seconds before the level is lost. */
   timeLimit: number;
   /** Finish within [3-star time, 2-star time] seconds. Slower = 1 star. */
@@ -54,6 +59,13 @@ export type Sheep = {
   penned: boolean;
   black: boolean;
   goal: Vec;
+  /** Seconds this scared sheep has been pinned against something. */
+  stuck: number;
+  /** A short dash sideways to break out of a corner. */
+  escape: { x: number; y: number; t: number } | null;
+  /** Position at the previous step (to notice when it is stuck). */
+  px: number;
+  py: number;
 };
 
 export type Dog = {
@@ -101,6 +113,11 @@ export type World = {
   status: GameStatus;
   loseReason: LoseReason | null;
   effects: Effect[];
+  /** Seconds until the dog can bark again. */
+  barkCooldown: number;
+  /** Bark shock waves (for the 3D effect). */
+  barks: Effect[];
+  mud: Circle[];
   rng: () => number;
 };
 

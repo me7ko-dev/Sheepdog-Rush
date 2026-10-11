@@ -29,10 +29,11 @@ export function Minimap({ world, tick }: { world: World; tick: number }) {
 function drawMap(world: World, _tick: number, height: number, scale: number, sy: number) {
   return createPicture(
     (c) => {
-      roundRect(c, 0, 0, MAP_WIDTH, height, 8, fill('#7BC950'));
+      roundRect(c, 0, 0, MAP_WIDTH, height, 8, fill(world.level.theme === 'autumn' ? '#A3C257' : '#7BC950'));
       c.save();
       c.scale(scale, sy);
       for (const r of world.water) c.drawRect(Skia.XYWHRect(r.x, r.y, r.w, r.h), fill('#47BDF5'));
+      for (const mud of world.mud) c.drawCircle(mud.x, mud.y, mud.r, fill('#7A5230'));
       for (const b of world.level.bridges) c.drawRect(Skia.XYWHRect(b.x, b.y, b.w, b.h), fill('#B98353'));
       const inner = penInnerRect(world.level.pen);
       c.drawRect(Skia.XYWHRect(inner.x, inner.y, inner.w, inner.h), fill('#F2DD98'));

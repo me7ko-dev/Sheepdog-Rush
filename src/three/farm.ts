@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { UNITS_PER_METER } from '../game/constants';
 import { makeRng } from '../game/math';
-import type { Circle, LevelDef, PenDef, Rect, Side } from '../game/types';
+import type { Circle, LevelDef, PenDef, Rect, Side, Theme } from '../game/types';
 import { barnRect, bridgeIsVertical, bridgeRails, penInnerRect, penWalls } from '../game/world';
 import { blobGeometry, Parts, shadowMaterial, shapes } from './kit';
 
@@ -35,6 +35,59 @@ export const PALETTE = {
   berry: '#E53950',
 };
 
+/** Colors that change with the season. */
+type ThemeColors = {
+  sky: string;
+  grass: string;
+  grassDark: string;
+  grassOutside: string;
+  tuft: string;
+  bush: string;
+  bushDark: string;
+  bushLight: string;
+  berry: string;
+  treeColors: string[];
+  pineColors: string[];
+  /** Flowers in spring, fallen leaves in autumn. */
+  smallColors: string[];
+};
+
+export const THEMES: Record<Theme, ThemeColors> = {
+  spring: {
+    sky: '#9ED9FF',
+    grass: '#86D35A',
+    grassDark: '#6DBE45',
+    grassOutside: '#6AB443',
+    tuft: '#4FA83A',
+    bush: '#3E9E45',
+    bushDark: '#358C3C',
+    bushLight: '#5DBA4E',
+    berry: '#E53950',
+    treeColors: ['#4CAF50', '#5DBB4E', '#3E9E45', '#7CC659'],
+    pineColors: ['#2F7D4A', '#38905A', '#2A6E42'],
+    smallColors: ['#FFFFFF', '#FFE066', '#FF9AA2', '#D7A6F0', '#9AD0FF'],
+  },
+  autumn: {
+    sky: '#B5DCF5',
+    grass: '#A9CB5C',
+    grassDark: '#8FB24A',
+    grassOutside: '#98B04C',
+    tuft: '#7E9F38',
+    bush: '#C86F2C',
+    bushDark: '#A65524',
+    bushLight: '#E39B3A',
+    berry: '#7E2424',
+    treeColors: ['#E8862A', '#D9562B', '#F2B33D', '#C9452E', '#9DBB4C'],
+    pineColors: ['#2F6B45', '#3A7A4F', '#2A5E3E'],
+    smallColors: ['#E8862A', '#D9562B', '#F2B33D', '#B5452E', '#F5D06A'],
+  },
+};
+
+export const themeOf = (level: LevelDef): ThemeColors => THEMES[level.theme ?? 'spring'];
+
+// The colors of the level being built (set at the start of buildFarm).
+let TH: ThemeColors = THEMES.spring;
+
 /** Rotation (around Y) that turns a model's +Z side to face `side` of a rectangle. */
 function facing(side: Side): number {
   switch (side) {
@@ -65,6 +118,7 @@ export type Farm = {
 };
 
 export function buildFarm(level: LevelDef): Farm {
+  TH = themeOf(level);
   const group = new THREE.Group();
   const rng = makeRng(level.seed * 31 + 7);
   const W = m(level.size.w);
@@ -93,9 +147,9 @@ export function buildFarm(level: LevelDef): Farm {
   ground.translate(W / 2, 0, H / 2);
   const gp = ground.attributes.position;
   const gColors = new Float32Array(gp.count * 3);
-  const cIn = new THREE.Color(PALETTE.grass);
-  const cDark = new THREE.Color(PALETTE.grassDark);
-  const cOut = new THREE.Color(PALETTE.grassOutside);
+  const cIn = new THREE.Color(TH.grass);
+  const cDark = new THREE.Color(TH.grassDark);
+  const cOut = new THREE.Color(TH.grassOutside);
   const tmp = new THREE.Color();
   for (let i = 0; i < gp.count; i++) {
     const x = gp.getX(i);
@@ -254,6 +308,25 @@ export function buildFarm(level: LevelDef): Farm {
       continue;
     }
     addTree(faceted, x, z, rng, addShadow);
+  }
+
+  // --- Mud puddles
+  for (const mud of level.mud ?? []) addMud(solid, mud, rng);
+
+  // --- Pumpkins in autumn (outside the meadow and by the barn)
+  if (level.theme === 'autumn') {
+    for (let i = 0; i < 26; i++) {
+      const edge = rng() * 4;
+      const out = 0.9 + rng() * 2.5;
+      const along = rng();
+      let x: number;
+      let z: number;
+      if (edge < 1) [x, z] = [along * W, -out];
+      else if (edge < 2) [x, z] = [along * W, H + out];
+      else if (edge < 3) [x, z] = [-out, along * H];
+      else [x, z] = [W + out, along * H];
+      addPumpkin(solid, x, z, 0.7 + rng() * 0.6, rng, addShadow);
+    }
   }
 
   // --- Grass tufts and flowers (instanced = one draw call each)
@@ -509,15 +582,15 @@ function addBush(
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + rng();
     const d = r * 0.45;
-    faceted.add(shapes.lowBall, i % 2 ? PALETTE.bush : '#358C3C', {
+    faceted.add(shapes.lowBall, i % 2 ? TH.bush : TH.bushDark, {
       pos: [x + Math.cos(a) * d, r * 0.55, z + Math.sin(a) * d],
       scale: r * (0.55 + rng() * 0.15),
     });
   }
-  faceted.add(shapes.lowBall, PALETTE.bushLight, { pos: [x - r * 0.1, r * 0.95, z - r * 0.1], scale: r * 0.55 });
+  faceted.add(shapes.lowBall, TH.bushLight, { pos: [x - r * 0.1, r * 0.95, z - r * 0.1], scale: r * 0.55 });
   for (let i = 0; i < 6; i++) {
     const a = rng() * Math.PI * 2;
-    faceted.add(shapes.ball, PALETTE.berry, {
+    faceted.add(shapes.ball, TH.berry, {
       pos: [x + Math.cos(a) * r * 0.85, r * (0.6 + rng() * 0.5), z + Math.sin(a) * r * 0.85],
       scale: 0.07,
     });
@@ -573,17 +646,15 @@ function addTree(
   if (rng() < 0.4) {
     // Pine
     faceted.add(shapes.lowCylinder, '#7A4E2D', { pos: [x, 0.5 * s, z], scale: [0.18 * s, 1 * s, 0.18 * s] });
-    const greens = ['#2F7D4A', '#38905A', '#2A6E42'];
     for (let i = 0; i < 3; i++) {
-      faceted.add(shapes.lowCone, greens[i], {
+      faceted.add(shapes.lowCone, TH.pineColors[i], {
         pos: [x, (1.2 + i * 0.85) * s, z],
         scale: [(1.3 - i * 0.32) * s, 1.4 * s, (1.3 - i * 0.32) * s],
       });
     }
   } else {
     faceted.add(shapes.lowCylinder, '#8A5A33', { pos: [x, 0.8 * s, z], scale: [0.2 * s, 1.6 * s, 0.2 * s] });
-    const greens = ['#4CAF50', '#5DBB4E', '#3E9E45', '#7CC659'];
-    const g = greens[Math.floor(rng() * greens.length)];
+    const g = TH.treeColors[Math.floor(rng() * TH.treeColors.length)];
     faceted.add(shapes.lowBall, g, { pos: [x, 2.2 * s, z], scale: 1.15 * s });
     faceted.add(shapes.lowBall, g, { pos: [x + 0.6 * s, 1.9 * s, z + 0.3 * s], scale: 0.75 * s });
     faceted.add(shapes.lowBall, g, { pos: [x - 0.5 * s, 2.0 * s, z - 0.4 * s], scale: 0.8 * s });
@@ -597,6 +668,52 @@ function addTree(
       }
     }
   }
+}
+
+function addMud(solid: Parts, c: Circle, rng: () => number) {
+  const x = m(c.x);
+  const z = m(c.y);
+  const r = m(c.r);
+  solid.add(shapes.disc, '#8A6239', { pos: [x, 0.012, z], scale: [r * 1.08, 0.02, r * 1.0] });
+  solid.add(shapes.disc, '#6E4A2A', { pos: [x, 0.02, z], scale: [r * 0.95, 0.02, r * 0.88] });
+  for (let i = 0; i < 5; i++) {
+    const a = rng() * Math.PI * 2;
+    const d = rng() * r * 0.6;
+    solid.add(shapes.disc, i % 2 ? '#5C3D22' : '#9B7550', {
+      pos: [x + Math.cos(a) * d, 0.028, z + Math.sin(a) * d],
+      scale: [r * (0.12 + rng() * 0.15), 0.01, r * (0.08 + rng() * 0.1)],
+    });
+  }
+  // Wet shine
+  solid.add(shapes.ball, '#B79A7A', { pos: [x - r * 0.25, 0.03, z - r * 0.2], scale: [r * 0.3, 0.008, r * 0.12] });
+}
+
+function addPumpkin(
+  solid: Parts,
+  x: number,
+  z: number,
+  size: number,
+  rng: () => number,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
+  const r = 0.32 * size;
+  addShadow(x, z + 0.05, r * 1.4);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    solid.add(shapes.ball, i % 2 ? '#F08A24' : '#E2771B', {
+      pos: [x + Math.cos(a) * r * 0.35, r * 0.75, z + Math.sin(a) * r * 0.35],
+      scale: [r * 0.7, r * 0.75, r * 0.7],
+    });
+  }
+  solid.add(shapes.cylinder, '#5E7A2E', {
+    pos: [x, r * 1.55, z],
+    rot: [rng() * 0.4, 0, 0.2],
+    scale: [0.04 * size, 0.2 * size, 0.04 * size],
+  });
+  solid.add(shapes.ball, '#6F9A35', {
+    pos: [x + 0.08 * size, r * 1.45, z],
+    scale: [0.12 * size, 0.02 * size, 0.07 * size],
+  });
 }
 
 function addWaterSparkles(group: THREE.Group, level: LevelDef, rng: () => number) {
@@ -647,7 +764,7 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
     [2.1, 0.3],
     [4.2, 0.2],
   ]) {
-    tuft.add(shapes.lowCone, '#4FA83A', {
+    tuft.add(shapes.lowCone, TH.tuft, {
       pos: [Math.cos(a) * 0.04, 0.11, Math.sin(a) * 0.04],
       rot: [Math.sin(a) * tilt, 0, Math.cos(a) * tilt],
       scale: [0.035, 0.24, 0.035],
@@ -660,21 +777,27 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
     tuftCount,
   );
   const flower = new Parts();
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    flower.add(shapes.ball, '#FFFFFF', {
-      pos: [Math.cos(a) * 0.06, 0.06, Math.sin(a) * 0.06],
-      scale: [0.05, 0.025, 0.05],
-    });
+  const autumn = level.theme === 'autumn';
+  if (autumn) {
+    // A fallen leaf
+    flower.add(shapes.ball, '#FFFFFF', { pos: [0, 0.02, 0], rot: [0.15, 0, 0.1], scale: [0.11, 0.012, 0.06] });
+  } else {
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      flower.add(shapes.ball, '#FFFFFF', {
+        pos: [Math.cos(a) * 0.06, 0.06, Math.sin(a) * 0.06],
+        scale: [0.05, 0.025, 0.05],
+      });
+    }
+    flower.add(shapes.ball, '#FFD23F', { pos: [0, 0.075, 0], scale: [0.035, 0.025, 0.035] });
   }
-  flower.add(shapes.ball, '#FFD23F', { pos: [0, 0.075, 0], scale: [0.035, 0.025, 0.035] });
-  const flowerCount = Math.round((W * H) / 9) + 80;
+  const flowerCount = Math.round((W * H) / (autumn ? 3 : 9)) + 80;
   const flowers = new THREE.InstancedMesh(
     flower.geometry(),
     new THREE.MeshLambertMaterial({ vertexColors: true }),
     flowerCount,
   );
-  const colors = ['#FFFFFF', '#FFE066', '#FF9AA2', '#D7A6F0', '#9AD0FF'].map((c) => new THREE.Color(c));
+  const colors = TH.smallColors.map((c) => new THREE.Color(c));
 
   const matrix = new THREE.Matrix4();
   const q = new THREE.Quaternion();

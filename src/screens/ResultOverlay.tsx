@@ -13,6 +13,8 @@ import { theme } from '../theme';
 type Props = {
   result: GameResult;
   hasNext: boolean;
+  /** How many Kennel items this win unlocked. */
+  newLooks?: number;
   onRetry: () => void;
   onNext: () => void;
   onMenu: () => void;
@@ -24,7 +26,7 @@ export function formatTime(seconds: number): string {
 }
 
 /** The win / lose card shown at the end of a level. */
-export function ResultOverlay({ result, hasNext, onRetry, onNext, onMenu }: Props) {
+export function ResultOverlay({ result, hasNext, newLooks = 0, onRetry, onNext, onMenu }: Props) {
   const { t } = useI18n();
 
   // A "ding" for every star, in time with the stars popping in.
@@ -61,6 +63,11 @@ export function ResultOverlay({ result, hasNext, onRetry, onNext, onMenu }: Prop
             </View>
             <Text style={styles.info}>{t('yourTime', { t: formatTime(result.time) })}</Text>
             {!hasNext && <Text style={styles.small}>{t('allDone')}</Text>}
+            {newLooks > 0 && (
+              <Animated.View entering={ZoomIn.delay(1300).springify()} style={styles.unlock}>
+                <Text style={styles.unlockText}>{t('newUnlock')}</Text>
+              </Animated.View>
+            )}
           </>
         ) : (
           <Text style={styles.info}>
@@ -107,5 +114,13 @@ const styles = StyleSheet.create({
   middleStar: { marginBottom: 14 },
   info: { fontSize: 20, fontWeight: '800', color: theme.text, marginTop: 8, textAlign: 'center' },
   small: { fontSize: 15, fontWeight: '600', color: theme.textLight, marginTop: 8, textAlign: 'center' },
+  unlock: {
+    marginTop: 12,
+    backgroundColor: theme.buttons.orange.bg,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  unlockText: { color: theme.white, fontWeight: '900', fontSize: 15, textAlign: 'center' },
   buttons: { marginTop: 22, gap: 12, alignItems: 'center' },
 });

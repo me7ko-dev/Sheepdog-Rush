@@ -11,22 +11,28 @@ import { I18nProvider } from './src/i18n';
 import { ads } from './src/monetization/ads';
 import { purchases } from './src/monetization/purchases';
 import { GameScreen } from './src/screens/GameScreen';
+import { KennelScreen } from './src/screens/KennelScreen';
 import { LevelSelectScreen } from './src/screens/LevelSelectScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { ProgressProvider } from './src/storage/progress';
+import { kennel } from './src/storage/kennel';
 import { settings } from './src/storage/settings';
 
 // Keep the splash screen up until the saved settings are loaded.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Which screen is visible. A tiny "navigator" is enough for a game with 3 screens.
-type Route = { name: 'start' } | { name: 'levels' } | { name: 'game'; levelId: number; key: number };
+type Route =
+  | { name: 'start' }
+  | { name: 'levels' }
+  | { name: 'kennel' }
+  | { name: 'game'; levelId: number; key: number };
 
 export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'start' });
 
   useEffect(() => {
-    settings.load().finally(() => {
+    Promise.all([settings.load(), kennel.load()]).finally(() => {
       sound.start();
       SplashScreen.hideAsync().catch(() => {});
     });
@@ -39,7 +45,7 @@ export default function App() {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       // The game screen handles the back button itself (pause first).
       if (route.name === 'game') return false;
-      if (route.name === 'levels') {
+      if (route.name === 'levels' || route.name === 'kennel') {
         setRoute({ name: 'start' });
         return true;
       }
@@ -57,7 +63,13 @@ export default function App() {
           <ProgressProvider>
             <StatusBar style="light" />
             <ErrorBoundary onReset={() => setRoute({ name: 'start' })}>
-              {route.name === 'start' && <StartScreen onPlay={() => setRoute({ name: 'levels' })} />}
+              {route.name === 'start' && (
+                <StartScreen
+                  onPlay={() => setRoute({ name: 'levels' })}
+                  onKennel={() => setRoute({ name: 'kennel' })}
+                />
+              )}
+              {route.name === 'kennel' && <KennelScreen onBack={() => setRoute({ name: 'start' })} />}
               {route.name === 'levels' && (
                 <LevelSelectScreen onBack={() => setRoute({ name: 'start' })} onSelect={openLevel} />
               )}

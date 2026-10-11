@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+import type { HatId, Outfit } from '../kennel/outfits';
+import { resolveOutfit } from '../kennel/outfits';
 import { Parts, shapes } from './kit';
 
 // The animals, built from simple shapes. All of them face +X and stand on y = 0.
@@ -146,7 +148,7 @@ export function createSheep(black: boolean, seed: number): Critter {
 
 // ---------------------------------------------------------------- dog & wolf
 
-type CanineStyle = {
+export type CanineStyle = {
   fur: string;
   light: string;
   eye: string;
@@ -156,6 +158,7 @@ type CanineStyle = {
   tailFluff: number;
   angry: boolean;
   scale: number;
+  hat?: HatId;
 };
 
 export const DOG_STYLE: CanineStyle = {
@@ -226,6 +229,7 @@ export function createCanine(style: CanineStyle): CanineCritter {
       });
     }
   }
+  if (style.hat && style.hat !== 'none') addHat(headParts, style.hat);
   head.add(new THREE.Mesh(headParts.geometry(), lambert));
   const tongueParts = new Parts().add(ball, '#FF6F91', { pos: [0.2, -0.11, 0.025], scale: [0.06, 0.02, 0.04] });
   const tongue = new THREE.Mesh(tongueParts.geometry(), lambert);
@@ -284,4 +288,53 @@ export function createCanine(style: CanineStyle): CanineCritter {
   };
 
   return { root, animate, setTongue: (on) => (tongueOn = on) };
+}
+
+/** The dog with the look chosen in the Kennel. */
+export function dogStyleFor(outfit: Outfit): CanineStyle {
+  const { coat, collar, hat } = resolveOutfit(outfit);
+  return { ...DOG_STYLE, fur: coat.fur, light: coat.light, collar: collar.color, hat: hat.id };
+}
+
+/** Hats sit on top of the head, between the ears (head space: +X is the nose). */
+function addHat(p: Parts, hat: HatId) {
+  const { cylinder, ball, cone, disc } = shapes;
+  switch (hat) {
+    case 'straw':
+      p.add(disc, '#E9CB7B', { pos: [-0.01, 0.15, 0], rot: [0, 0, -0.12], scale: [0.25, 0.02, 0.25] });
+      p.add(cylinder, '#E2BD64', { pos: [-0.02, 0.21, 0], rot: [0, 0, -0.12], scale: [0.12, 0.11, 0.12] });
+      p.add(cylinder, '#D9483A', { pos: [-0.015, 0.175, 0], rot: [0, 0, -0.12], scale: [0.125, 0.03, 0.125] });
+      break;
+    case 'cap':
+      p.add(ball, '#2F80ED', { pos: [-0.01, 0.13, 0], scale: [0.15, 0.1, 0.15] });
+      p.add(disc, '#1F5FBF', { pos: [0.13, 0.14, 0], rot: [0, 0, -0.15], scale: [0.11, 0.015, 0.12] });
+      p.add(ball, '#FFFFFF', { pos: [-0.01, 0.235, 0], scale: 0.025 });
+      break;
+    case 'flowers': {
+      const colors = ['#FF6F91', '#FFE066', '#FFFFFF', '#D7A6F0', '#9AD0FF', '#FF9F1C'];
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        p.add(ball, colors[i], { pos: [Math.cos(a) * 0.11 - 0.02, 0.14, Math.sin(a) * 0.11], scale: 0.045 });
+        p.add(ball, '#5DBA4E', {
+          pos: [Math.cos(a + 0.5) * 0.12 - 0.02, 0.13, Math.sin(a + 0.5) * 0.12],
+          scale: [0.04, 0.012, 0.025],
+        });
+      }
+      break;
+    }
+    case 'crown':
+      p.add(cylinder, '#F2C230', { pos: [-0.01, 0.18, 0], scale: [0.1, 0.07, 0.1] });
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        p.add(cone, '#F2C230', {
+          pos: [Math.cos(a) * 0.085 - 0.01, 0.245, Math.sin(a) * 0.085],
+          scale: [0.03, 0.06, 0.03],
+        });
+        p.add(ball, i % 2 ? '#E53950' : '#2F80ED', {
+          pos: [Math.cos(a) * 0.1 - 0.01, 0.18, Math.sin(a) * 0.1],
+          scale: 0.018,
+        });
+      }
+      break;
+  }
 }

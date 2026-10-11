@@ -11,6 +11,7 @@ import { SheepIcon } from '../components/Icons';
 import { SettingsSheet } from '../components/SettingsSheet';
 import { TutorialHand } from '../components/TutorialHand';
 import { getLevel, LEVELS } from '../game/levels';
+import { newUnlocks } from '../kennel/outfits';
 import { useI18n } from '../i18n';
 import { ads } from '../monetization/ads';
 import { useProgress } from '../storage/progress';
@@ -26,7 +27,8 @@ type Props = {
 export function GameScreen({ levelId, onExit, onNext }: Props) {
   const level = getLevel(levelId) ?? LEVELS[0];
   const { t } = useI18n();
-  const { recordWin } = useProgress();
+  const { recordWin, starsFor, totalStars } = useProgress();
+  const [unlocked, setUnlocked] = useState(0);
   const insets = useSafeAreaInsets();
   // Don't let the screen go dark while herding.
   useKeepAwake();
@@ -59,10 +61,14 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
   const onEnd = useCallback(
     (r: GameResult) => {
       setResult(r);
-      if (r.won) recordWin(level.id, r.stars);
+      if (r.won) {
+        const gained = Math.max(0, r.stars - starsFor(level.id));
+        setUnlocked(newUnlocks(totalStars, totalStars + gained));
+        recordWin(level.id, r.stars);
+      }
       ads.onLevelEnd({ levelId: level.id, won: r.won }).catch(() => {});
     },
-    [level.id, recordWin],
+    [level.id, recordWin, starsFor, totalStars],
   );
 
   // Pause automatically when the app goes to the background.
@@ -126,15 +132,17 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
           <Animated.View
             entering={FadeIn.delay(300)}
             exiting={FadeOut}
-            style={[styles.hint, { bottom: insets.bottom + 24 }]}
+            style={[styles.hint, { bottom: insets.bottom + 112 }]}
           >
             <Text style={styles.hintMain}>{t('hintDrag')}</Text>
             <Text style={styles.hintSub}>{t('hintGoal')}</Text>
             {level.blackSheep > 0 && <Text style={styles.hintSub}>{t('hintBlack')}</Text>}
+            {(level.id === 2 || level.wolf) && <Text style={styles.hintSub}>{t('hintBark')}</Text>}
+            {level.id === 11 && <Text style={styles.hintSub}>{t('hintMud')}</Text>}
           </Animated.View>
         )}
 
-        {!hud.started && !result && level.id === 1 && <TutorialHand bottom={insets.bottom + 150} />}
+        {!hud.started && !result && level.id === 1 && <TutorialHand bottom={insets.bottom + 230} />}
 
         {wolfAlert && !result && (
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut} style={styles.wolfAlert}>
@@ -161,6 +169,7 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
       {result && (
         <ResultOverlay
           result={result}
+          newLooks={unlocked}
           hasNext={!!nextLevel}
           onRetry={restart}
           onNext={() => nextLevel && onNext(nextLevel.id)}

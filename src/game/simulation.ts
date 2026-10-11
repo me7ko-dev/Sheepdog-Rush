@@ -1,9 +1,13 @@
 import {
+  BARK_COOLDOWN,
+  BARK_RADIUS,
+  BARK_WOLF_RADIUS,
   DOG_MAX_SPEED,
   DOG_R,
   DOG_RESPONSE,
   FEAR_FORCE,
   FEAR_RADIUS,
+  MUD_SPEED,
   NEIGHBOR_RADIUS,
   SEPARATION_RADIUS,
   SHEEP_CALM_SPEED,
@@ -29,6 +33,9 @@ export function stepWorld(world: World, dt: number): GameEvent[] {
   const events: GameEvent[] = [];
   world.clock += dt;
   if (world.started && world.status === 'playing') world.elapsed += dt;
+  world.barkCooldown = Math.max(0, world.barkCooldown - dt);
+  for (const b of world.barks) b.age += dt;
+  world.barks = world.barks.filter((b) => b.age < 0.8);
 
   updateDog(world, dt);
   if (world.wolf) updateWolf(world, world.wolf, dt, events);
@@ -93,6 +100,42 @@ export function aimDog(world: World, p: { x: number; y: number }) {
   world.started = true;
 }
 
+/**
+ * The dog barks: every sheep nearby runs away at full speed and the wolf flees.
+ * Returns false while the bark is still recharging.
+ */
+export function bark(world: World): boolean {
+  if (world.status !== 'playing' || world.barkCooldown > 0) return false;
+  world.barkCooldown = BARK_COOLDOWN;
+  world.started = true;
+  const dog = world.dog;
+  world.barks.push({ x: dog.x, y: dog.y, age: 0 });
+  for (const s of world.sheep) {
+    if (s.penned) continue;
+    const dx = s.x - dog.x;
+    const dy = s.y - dog.y;
+    const d = Math.hypot(dx, dy) || 0.001;
+    if (d > BARK_RADIUS) continue;
+    const push = SHEEP_PANIC_SPEED * (1 - (d / BARK_RADIUS) * 0.4);
+    s.vx += (dx / d) * push;
+    s.vy += (dy / d) * push;
+    s.panic = 1;
+  }
+  const wolf = world.wolf;
+  if (wolf?.active && Math.hypot(wolf.x - dog.x, wolf.y - dog.y) < BARK_WOLF_RADIUS) {
+    wolf.fleeing = WOLF_FLEE_TIME * 1.5;
+  }
+  return true;
+}
+
+/** Everyone is slower in mud. */
+function mudFactor(world: World, x: number, y: number): number {
+  for (const m of world.mud) {
+    if (Math.hypot(x - m.x, y - m.y) < m.r) return MUD_SPEED;
+  }
+  return 1;
+}
+
 /** The finger was lifted: the dog finishes running to the last point. */
 export function releaseDog(world: World) {
   world.touching = false;
@@ -120,7 +163,7 @@ function updateDog(world: World, dt: number) {
     const d = Math.hypot(dx, dy);
     if (d > 3) {
       // Slow down when close to the finger, so the dog doesn't overshoot.
-      const speed = DOG_MAX_SPEED * Math.min(1, d / 45);
+      const speed = DOG_MAX_SPEED * Math.min(1, d / 45) * mudFactor(world, dog.x, dog.y);
       wantX = (dx / d) * speed;
       wantY = (dy / d) * speed;
     }
@@ -178,7 +221,8 @@ function updateWolf(world: World, wolf: Wolf, dt: number, events: GameEvent[]) {
     }
   }
 
-  steer(wolf, wantX, wantY, 5, dt);
+  const wolfMud = mudFactor(world, wolf.x, wolf.y);
+  steer(wolf, wantX * wolfMud, wantY * wolfMud, 5, dt);
   collide(world, wolf, WOLF_R);
   // The wolf never goes into the barn yard.
   const pen = world.level.pen;
@@ -195,6 +239,23 @@ function updateFreeSheep(world: World, s: Sheep, dt: number) {
   let ax = 0;
   let ay = 0;
 
+  // 0. A scared sheep pinned in a corner dashes out sideways past the dog.
+  const moved = Math.hypot(s.x - s.px, s.y - s.py) / Math.max(dt, 0.001);
+  s.px = s.x;
+  s.py = s.y;
+  if (s.escape) {
+    s.escape.t -= dt;
+    if (s.escape.t <= 0) s.escape = null;
+  } else if (s.panic > 0.4 && moved < 18) {
+    s.stuck += dt;
+    if (s.stuck > 0.7) {
+      s.escape = findEscape(world, s);
+      s.stuck = 0;
+    }
+  } else {
+    s.stuck = Math.max(0, s.stuck - dt * 2);
+  }
+
   // 1. Run away from the dog (and even more from the wolf).
   let fear = 0;
   const flee = (fx: number, fy: number, radius: number, force: number) => {
@@ -207,7 +268,11 @@ function updateFreeSheep(world: World, s: Sheep, dt: number) {
     ay += (dy / d) * f * force;
     if (f > fear) fear = f;
   };
-  flee(world.dog.x, world.dog.y, FEAR_RADIUS, FEAR_FORCE);
+  flee(world.dog.x, world.dog.y, FEAR_RADIUS, s.escape ? FEAR_FORCE * 0.15 : FEAR_FORCE);
+  if (s.escape) {
+    ax += s.escape.x * 900;
+    ay += s.escape.y * 900;
+  }
   const wolf = world.wolf;
   if (wolf && wolf.active) flee(wolf.x, wolf.y, SHEEP_WOLF_FEAR_RADIUS, FEAR_FORCE * 1.2);
 
@@ -271,7 +336,7 @@ function updateFreeSheep(world: World, s: Sheep, dt: number) {
   s.vx *= damping;
   s.vy *= damping;
 
-  const maxSpeed = SHEEP_CALM_SPEED + (SHEEP_PANIC_SPEED - SHEEP_CALM_SPEED) * s.panic;
+  const maxSpeed = (SHEEP_CALM_SPEED + (SHEEP_PANIC_SPEED - SHEEP_CALM_SPEED) * s.panic) * mudFactor(world, s.x, s.y);
   const speed = Math.hypot(s.vx, s.vy);
   if (speed > maxSpeed) {
     s.vx = (s.vx / speed) * maxSpeed;
@@ -281,6 +346,40 @@ function updateFreeSheep(world: World, s: Sheep, dt: number) {
   s.x += s.vx * dt;
   s.y += s.vy * dt;
   animateSheep(s, dt);
+}
+
+/** True if a sheep standing at (x, y) would bump into something. */
+function blockedAt(world: World, x: number, y: number): boolean {
+  const r = SHEEP_R + 2;
+  if (x < r || y < r || x > world.size.w - r || y > world.size.h - r) return true;
+  const inRect = (q: { x: number; y: number; w: number; h: number }) =>
+    x > q.x - r && x < q.x + q.w + r && y > q.y - r && y < q.y + q.h + r;
+  if (world.walls.some(inRect) || world.water.some(inRect)) return true;
+  return world.circles.some((c) => Math.hypot(x - c.x, y - c.y) < c.r + r);
+}
+
+/** Picks the free direction that leads most away from the dog. */
+function findEscape(world: World, s: Sheep): { x: number; y: number; t: number } | null {
+  let awayX = s.x - world.dog.x;
+  let awayY = s.y - world.dog.y;
+  const d = Math.hypot(awayX, awayY) || 1;
+  awayX /= d;
+  awayY /= d;
+  let best: { x: number; y: number; t: number } | null = null;
+  let bestScore = -Infinity;
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    if (blockedAt(world, s.x + dx * 16, s.y + dy * 16) || blockedAt(world, s.x + dx * 34, s.y + dy * 34)) continue;
+    // Prefer going away from the dog, but never straight into it.
+    const score = dx * awayX + dy * awayY;
+    if (score > bestScore) {
+      bestScore = score;
+      best = { x: dx, y: dy, t: 0.7 };
+    }
+  }
+  return best;
 }
 
 const AVOID_DIST = 18;

@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
-import { UNITS_PER_METER } from '../game/constants';
+import { BARK_RADIUS, UNITS_PER_METER } from '../game/constants';
 import type { Effect, LevelDef, Side, Vec, World } from '../game/types';
-import { createCanine, createSheep, DOG_STYLE, WOLF_STYLE, type CanineCritter, type Critter } from './characters';
-import { buildFarm, m, PALETTE, type Farm } from './farm';
+import { kennel } from '../storage/kennel';
+import { createCanine, createSheep, dogStyleFor, WOLF_STYLE, type CanineCritter, type Critter } from './characters';
+import { buildFarm, m, themeOf, type Farm } from './farm';
 import { blobGeometry, shadowMaterial } from './kit';
 
 export type CameraMode = 'follow' | 'orbit';
@@ -45,8 +46,9 @@ export class FarmScene {
     private level: LevelDef,
     private mode: CameraMode,
   ) {
-    this.scene.background = new THREE.Color(PALETTE.sky);
-    this.scene.fog = new THREE.Fog(PALETTE.sky, 55, 120);
+    const sky = themeOf(level).sky;
+    this.scene.background = new THREE.Color(sky);
+    this.scene.fog = new THREE.Fog(sky, 55, 120);
     this.scene.add(new THREE.HemisphereLight('#EAF7FF', '#5E9E3A', 2.2));
     const sun = new THREE.DirectionalLight('#FFF0D2', 2.1);
     sun.position.set(-12, 30, 18);
@@ -102,12 +104,15 @@ export class FarmScene {
     }
     this.pops = [];
     this.seenEffects = new WeakSet();
+    for (const wave of this.barkWaves) this.scene.remove(wave.mesh);
+    this.barkWaves = [];
+    this.seenBarks = new WeakSet();
     this.sheep = world.sheep.map((s) => {
       const c = createSheep(s.black, s.id);
       this.actors.add(c.root);
       return c;
     });
-    this.dog = createCanine(DOG_STYLE);
+    this.dog = createCanine(dogStyleFor(kennel.get()));
     this.actors.add(this.dog.root);
     this.wolf = world.wolf ? createCanine(WOLF_STYLE) : null;
     if (this.wolf) this.actors.add(this.wolf.root);
@@ -182,7 +187,43 @@ export class FarmScene {
     this.updateArrow(world);
     this.updateRing(world);
     this.updatePops(world, dt);
+    this.updateBarks(world, dt);
     this.updateCamera(world, dt);
+  }
+
+  // Bark shock waves: a big ring growing around the dog, and a little hop.
+  private barkWaves: { mesh: THREE.Mesh; age: number }[] = [];
+  private seenBarks = new WeakSet<Effect>();
+  private dogHop = 0;
+
+  private updateBarks(world: World, dt: number) {
+    for (const b of world.barks) {
+      if (this.seenBarks.has(b)) continue;
+      this.seenBarks.add(b);
+      const mesh = new THREE.Mesh(
+        this.popRingGeometry,
+        new THREE.MeshBasicMaterial({ color: '#FFF3C4', transparent: true, opacity: 0.85, depthWrite: false }),
+      );
+      mesh.position.set(m(b.x), 0.06, m(b.y));
+      this.scene.add(mesh);
+      this.barkWaves.push({ mesh, age: 0 });
+      this.dogHop = 0.3;
+    }
+    for (const wave of this.barkWaves) {
+      wave.age += dt;
+      const t = Math.min(1, wave.age / 0.6);
+      wave.mesh.scale.setScalar(0.6 + t * m(BARK_RADIUS));
+      (wave.mesh.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - t);
+    }
+    for (const wave of this.barkWaves.filter((w) => w.age >= 0.6)) {
+      this.scene.remove(wave.mesh);
+      (wave.mesh.material as THREE.Material).dispose();
+    }
+    this.barkWaves = this.barkWaves.filter((w) => w.age < 0.6);
+    if (this.dog) {
+      this.dogHop = Math.max(0, this.dogHop - dt);
+      this.dog.root.position.y = Math.sin((this.dogHop / 0.3) * Math.PI) * 0.35;
+    }
   }
 
   private updateArrow(world: World) {

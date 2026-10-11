@@ -157,6 +157,10 @@ export function createWorld(level: LevelDef): World {
       phase: rng() * 4,
       penned: false,
       goal: { x, y },
+      stuck: 0,
+      escape: null,
+      px: x,
+      py: y,
     });
   }
 
@@ -202,6 +206,9 @@ export function createWorld(level: LevelDef): World {
     clock: 0,
     status: 'playing',
     loseReason: null,
+    barkCooldown: 0,
+    barks: [],
+    mud: level.mud ?? [],
     effects: [],
     rng,
   };

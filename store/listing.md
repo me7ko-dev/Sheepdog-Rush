@@ -12,7 +12,7 @@ Images: `store/screenshots/<language>/<size>/`, `store/feature-graphic-1024x500.
 **Subtitle – App Store** (max 30): `Herd sheep into the barn!`
 
 **Short description – Google Play** (max 80):
-`Guide your sheepdog and herd fluffy sheep into the barn! 10 cozy 3D farm levels.`
+`Guide your sheepdog and herd fluffy sheep into the barn! 20 cozy 3D farm levels.`
 
 **Promotional text – App Store** (max 170):
 `Drag your finger, your border collie runs – and the flock runs away from it! Bring every sheep home before time runs out and keep the hungry wolf away.`
@@ -29,7 +29,10 @@ HOW TO PLAY
 
 FEATURES
 • Bright, cozy 3D farm with a red barn, windmill, rivers and bridges
-• 10 hand-made levels: bushes, fences, hay mazes, rivers and rocky hills
+• 20 hand-made levels in two seasons: Spring Meadow and Autumn Hills
+• Bark to scatter the flock and scare the wolf away
+• Sticky mud, hay mazes, rivers and rocky hills
+• The Kennel: dress up your dog with coats, collars and hats unlocked with stars
 • Stubborn black sheep that love to wander off
 • A hungry wolf in the later levels – chase it away!
 • Mini map so no sheep gets lost
@@ -47,7 +50,13 @@ FAIR AND FRIENDLY
 **Keywords – App Store** (max 100, comma separated):
 `sheep,sheepdog,farm,herding,puzzle,animals,barn,wolf,flock,collie,casual,family,kids,3d`
 
-**What's new (1.0.0):** `First release – welcome to the farm!`
+**What's new (1.1.0):**
+```
+• New world: Autumn Hills – 10 new levels with pumpkins, fallen leaves and sticky mud
+• Bark! Tap WOOF! to scatter the flock and chase the wolf away
+• The Kennel: unlock new coats, collars and hats for your sheepdog
+• Smarter sheep that slip out of tight corners
+```
 
 **Category:** Games → Puzzle (secondary: Casual) · Google Play: Game → Puzzle
 
@@ -73,7 +82,7 @@ FAIR AND FRIENDLY
 **Подзаглавие – App Store** (до 30): `Прибери овцете в хамбара!`
 
 **Кратко описание – Google Play** (до 80):
-`Води овчарското куче и прибери пухкавите овце в хамбара! 10 нива в 3D ферма.`
+`Води овчарското куче и прибери пухкавите овце в хамбара! 20 нива в 3D ферма.`
 
 **Промо текст – App Store** (до 170):
 `Плъзни пръст – твоето бордър коли тича натам, а стадото бяга от него! Прибери всички овце, преди времето да свърши, и пази стадото от гладния вълк.`
@@ -90,7 +99,10 @@ FAIR AND FRIENDLY
 
 ОСОБЕНОСТИ
 • Цветна и уютна 3D ферма с червен хамбар, вятърна мелница, реки и мостове
-• 10 нива: храсти, огради, лабиринти от сено, реки и скалисти хълмове
+• 20 нива в два сезона: Пролетна поляна и Есенни хълмове
+• Лай, за да разпръснеш стадото и да прогониш вълка
+• Лепкава кал, лабиринти от сено, реки и скалисти хълмове
+• Колибката: облечи кучето с козини, нашийници и шапки, отключени със звезди
 • Инатливи черни овце, които обичат да се отделят
 • Гладен вълк в по-късните нива – прогони го!
 • Мини-карта, за да не се изгуби нито една овца
@@ -108,4 +120,10 @@ FAIR AND FRIENDLY
 **Ключови думи – App Store:**
 `овце,овчарско куче,ферма,пъзел,животни,хамбар,вълк,стадо,коли,семейна,детска,3d`
 
-**Какво ново (1.0.0):** `Първа версия – добре дошли във фермата!`
+**Какво ново (1.1.0):**
+```
+• Нов свят: Есенни хълмове – 10 нови нива с тикви, опадали листа и лепкава кал
+• Лай! Натисни БАУ!, за да разпръснеш стадото и да прогониш вълка
+• Колибката: отключи нови козини, нашийници и шапки за кучето
+• По-умни овце, които се измъкват от тесни ъгли
+```
