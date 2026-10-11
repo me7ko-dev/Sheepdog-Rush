@@ -1,6 +1,6 @@
 import { BARN_DEPTH, FENCE_THICKNESS, SHEEP_R } from './constants';
 import { makeRng, pointInRect } from './math';
-import type { LevelDef, PenDef, Rect, Sheep, World } from './types';
+import type { LevelDef, PenDef, Patch, Rect, Sheep, World } from './types';
 
 /** The pen walls: four sides, with a gap (the gate) in one of them. */
 export function penWalls(pen: PenDef): Rect[] {
@@ -121,7 +121,7 @@ export function createWorld(level: LevelDef): World {
   const rng = makeRng(level.seed);
   const walls = [...level.fences, ...penWalls(level.pen), barnRect(level.pen), ...bridgeRails(level)];
   const water = solidWater(level);
-  const circles = [...level.bushes, ...level.rocks, ...level.hay];
+  const circles = [...level.bushes, ...level.rocks, ...level.hay, ...(level.snowmen ?? [])];
 
   const blocked = (x: number, y: number) => {
     const pad = SHEEP_R + 4;
@@ -209,6 +209,7 @@ export function createWorld(level: LevelDef): World {
     barkCooldown: 0,
     barks: [],
     mud: level.mud ?? [],
+    ice: level.ice ?? [],
     effects: [],
     rng,
   };
@@ -218,4 +219,13 @@ export function starsForTime(level: LevelDef, seconds: number): number {
   if (seconds <= level.starTimes[0]) return 3;
   if (seconds <= level.starTimes[1]) return 2;
   return 1;
+}
+
+/** True if (x, y) is inside a mud or ice patch. */
+export function inPatch(p: Patch, x: number, y: number): boolean {
+  return 'r' in p ? Math.hypot(x - p.x, y - p.y) < p.r : pointInRect(x, y, p);
+}
+
+export function onIce(world: World, x: number, y: number): boolean {
+  return world.ice.some((p) => inPatch(p, x, y));
 }

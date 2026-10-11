@@ -27,8 +27,9 @@ type Props = {
 export function GameScreen({ levelId, onExit, onNext }: Props) {
   const level = getLevel(levelId) ?? LEVELS[0];
   const { t } = useI18n();
-  const { recordWin, starsFor, totalStars } = useProgress();
+  const { recordWin, starsFor, bestTime, totalStars } = useProgress();
   const [unlocked, setUnlocked] = useState(0);
+  const [record, setRecord] = useState<{ best: number | null; isNew: boolean }>({ best: null, isNew: false });
   const insets = useSafeAreaInsets();
   // Don't let the screen go dark while herding.
   useKeepAwake();
@@ -64,11 +65,16 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
       if (r.won) {
         const gained = Math.max(0, r.stars - starsFor(level.id));
         setUnlocked(newUnlocks(totalStars, totalStars + gained));
-        recordWin(level.id, r.stars);
+        const before = bestTime(level.id);
+        setRecord({
+          best: before === null ? r.time : Math.min(before, r.time),
+          isNew: before !== null && r.time < before,
+        });
+        recordWin(level.id, r.stars, r.time);
       }
       ads.onLevelEnd({ levelId: level.id, won: r.won }).catch(() => {});
     },
-    [level.id, recordWin, starsFor, totalStars],
+    [level.id, recordWin, starsFor, bestTime, totalStars],
   );
 
   // Pause automatically when the app goes to the background.
@@ -139,6 +145,7 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
             {level.blackSheep > 0 && <Text style={styles.hintSub}>{t('hintBlack')}</Text>}
             {(level.id === 2 || level.wolf) && <Text style={styles.hintSub}>{t('hintBark')}</Text>}
             {level.id === 11 && <Text style={styles.hintSub}>{t('hintMud')}</Text>}
+            {level.id === 21 && <Text style={styles.hintSub}>{t('hintIce')}</Text>}
           </Animated.View>
         )}
 
@@ -170,6 +177,8 @@ export function GameScreen({ levelId, onExit, onNext }: Props) {
         <ResultOverlay
           result={result}
           newLooks={unlocked}
+          best={record.best}
+          newRecord={record.isNew}
           hasNext={!!nextLevel}
           onRetry={restart}
           onNext={() => nextLevel && onNext(nextLevel.id)}

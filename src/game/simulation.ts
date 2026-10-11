@@ -7,6 +7,8 @@ import {
   DOG_RESPONSE,
   FEAR_FORCE,
   FEAR_RADIUS,
+  ICE_FRICTION,
+  ICE_GRIP,
   MUD_SPEED,
   NEIGHBOR_RADIUS,
   SEPARATION_RADIUS,
@@ -22,7 +24,7 @@ import {
 } from './constants';
 import { clamp, pointInRect, pushCircleOutOfCircle, pushCircleOutOfRect, turnTowards } from './math';
 import type { GameEvent, Sheep, Wolf, World } from './types';
-import { starsForTime } from './world';
+import { onIce, starsForTime } from './world';
 
 const EFFECT_LIFETIME = 1;
 
@@ -168,7 +170,7 @@ function updateDog(world: World, dt: number) {
       wantY = (dy / d) * speed;
     }
   }
-  steer(dog, wantX, wantY, DOG_RESPONSE, dt);
+  steer(dog, wantX, wantY, onIce(world, dog.x, dog.y) ? DOG_RESPONSE * ICE_GRIP : DOG_RESPONSE, dt);
   collide(world, dog, DOG_R);
   dog.x = clamp(dog.x, DOG_R, world.size.w - DOG_R);
   dog.y = clamp(dog.y, DOG_R, world.size.h - DOG_R);
@@ -222,7 +224,7 @@ function updateWolf(world: World, wolf: Wolf, dt: number, events: GameEvent[]) {
   }
 
   const wolfMud = mudFactor(world, wolf.x, wolf.y);
-  steer(wolf, wantX * wolfMud, wantY * wolfMud, 5, dt);
+  steer(wolf, wantX * wolfMud, wantY * wolfMud, onIce(world, wolf.x, wolf.y) ? 5 * ICE_GRIP : 5, dt);
   collide(world, wolf, WOLF_R);
   // The wolf never goes into the barn yard.
   const pen = world.level.pen;
@@ -330,13 +332,18 @@ function updateFreeSheep(world: World, s: Sheep, dt: number) {
   const towards = count > 0 ? { x: cx / count, y: cy / count } : null;
   [ax, ay] = slideAlongObstacles(world, s, ax, ay, towards);
 
-  s.vx += ax * dt;
-  s.vy += ay * dt;
-  const damping = Math.exp(-dt * (1.4 + 1.8 * (1 - s.panic)));
+  // 5. On ice there is little grip: sheep keep sliding and can barely change direction.
+  const icy = onIce(world, s.x, s.y);
+  const grip = icy ? ICE_GRIP : 1;
+  s.vx += ax * dt * grip;
+  s.vy += ay * dt * grip;
+  const damping = Math.exp(-dt * (icy ? ICE_FRICTION : 1.4 + 1.8 * (1 - s.panic)));
   s.vx *= damping;
   s.vy *= damping;
 
-  const maxSpeed = (SHEEP_CALM_SPEED + (SHEEP_PANIC_SPEED - SHEEP_CALM_SPEED) * s.panic) * mudFactor(world, s.x, s.y);
+  const maxSpeed = icy
+    ? SHEEP_PANIC_SPEED
+    : (SHEEP_CALM_SPEED + (SHEEP_PANIC_SPEED - SHEEP_CALM_SPEED) * s.panic) * mudFactor(world, s.x, s.y);
   const speed = Math.hypot(s.vx, s.vy);
   if (speed > maxSpeed) {
     s.vx = (s.vx / speed) * maxSpeed;

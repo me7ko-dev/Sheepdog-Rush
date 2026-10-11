@@ -1,7 +1,7 @@
 """
 Makes App Store / Google Play screenshots with a caption on top.
 Usage: python3 tools/art/store-screens.py <folder with raw 1290x2796 screenshots>
-Raw screenshots (1-start.png ... 7-kennel.png) come from the browser build (see README).
+Raw screenshots (1-start.png ... 8-winter.png) come from the browser build (see README).
 """
 import os
 import sys
@@ -22,18 +22,20 @@ CAPTIONS = {
         '2-play': 'Drag your finger -\nthe dog runs there',
         '3-wolf': 'Chase away\nthe hungry wolf!',
         '4-win': 'Earn 3 stars\non every level',
-        '5-levels': '20 levels in\ntwo seasons',
+        '5-levels': '30 levels in\nthree seasons',
         '6-autumn': 'Bark to scatter\nthe flock!',
         '7-kennel': 'Dress up\nyour sheepdog',
+        '8-winter': 'Slide across\nfrozen ponds!',
     },
     'bg': {
         '1-start': 'Прибери стадото\nв хамбара!',
         '2-play': 'Плъзни пръст -\nкучето тича натам',
         '3-wolf': 'Прогони\nгладния вълк!',
         '4-win': 'Събери 3 звезди\nна всяко ниво',
-        '5-levels': '20 нива\nв два сезона',
+        '5-levels': '30 нива\nв три сезона',
         '6-autumn': 'Лай и разпръсни\nстадото!',
         '7-kennel': 'Облечи своето\nовчарско куче',
+        '8-winter': 'Пързаляй се по\nзамръзнали езера!',
     },
 }
 

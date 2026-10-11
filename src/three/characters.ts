@@ -154,6 +154,8 @@ export type CanineStyle = {
   eye: string;
   pupil: string;
   collar: string | null;
+  /** Second color: the collar becomes a striped scarf. */
+  scarf?: string;
   earTall: number;
   tailFluff: number;
   angry: boolean;
@@ -199,7 +201,23 @@ export function createCanine(style: CanineStyle): CanineCritter {
   torso.add(ball, style.light, { pos: [0.27, 0.5, 0], scale: [0.16, 0.2, 0.15] });
   torso.add(ball, style.light, { pos: [0.33, 0.63, 0], scale: [0.14, 0.17, 0.165] });
   torso.add(ball, style.fur, { pos: [-0.05, 0.66, 0], scale: [0.3, 0.1, 0.14] });
-  if (style.collar) {
+  if (style.collar && style.scarf) {
+    // A thick knitted scarf with stripes and one end hanging down the chest.
+    for (let i = 0; i < 3; i++) {
+      torso.add(torus, i === 1 ? style.scarf : style.collar, {
+        pos: [0.37 + i * 0.012, 0.66 - i * 0.025, 0],
+        rot: [0, Math.PI / 2, -0.45],
+        scale: [0.155, 0.155, 0.26],
+      });
+    }
+    for (let i = 0; i < 4; i++) {
+      torso.add(shapes.box, i % 2 ? style.scarf : style.collar, {
+        pos: [0.47 + i * 0.008, 0.6 - i * 0.055, 0.07],
+        rot: [0.1, 0, -0.2],
+        scale: [0.04, 0.055, 0.085],
+      });
+    }
+  } else if (style.collar) {
     torso.add(torus, style.collar, { pos: [0.37, 0.66, 0], rot: [0, Math.PI / 2, -0.45], scale: [0.15, 0.15, 0.14] });
     torso.add(ball, '#FFC531', { pos: [0.45, 0.56, 0], scale: 0.035 });
   }
@@ -293,7 +311,15 @@ export function createCanine(style: CanineStyle): CanineCritter {
 /** The dog with the look chosen in the Kennel. */
 export function dogStyleFor(outfit: Outfit): CanineStyle {
   const { coat, collar, hat } = resolveOutfit(outfit);
-  return { ...DOG_STYLE, fur: coat.fur, light: coat.light, collar: collar.color, hat: hat.id };
+  return {
+    ...DOG_STYLE,
+    fur: coat.fur,
+    light: coat.light,
+    pupil: coat.eyes ?? DOG_STYLE.pupil,
+    collar: collar.color,
+    scarf: collar.stripe,
+    hat: hat.id,
+  };
 }
 
 /** Hats sit on top of the head, between the ears (head space: +X is the nose). */
@@ -322,6 +348,37 @@ function addHat(p: Parts, hat: HatId) {
       }
       break;
     }
+    case 'beanie':
+      p.add(ball, '#E53935', { pos: [-0.015, 0.12, 0], scale: [0.16, 0.13, 0.16] });
+      p.add(cylinder, '#FFFFFF', { pos: [-0.01, 0.1, 0], rot: [0, 0, -0.1], scale: [0.165, 0.05, 0.165] });
+      for (const y of [0.17, 0.21])
+        p.add(cylinder, '#FFFFFF', {
+          pos: [-0.015, y, 0],
+          scale: [0.15 - (y - 0.17) * 1.2, 0.012, 0.15 - (y - 0.17) * 1.2],
+        });
+      p.add(ball, '#FFFFFF', { pos: [-0.02, 0.27, 0], scale: 0.055 });
+      break;
+    case 'antlers':
+      for (const s of [-1, 1]) {
+        p.add(cylinder, '#8A5A33', {
+          pos: [-0.04, 0.2, s * 0.07],
+          rot: [-s * 0.35, 0, 0],
+          scale: [0.018, 0.14, 0.018],
+        });
+        p.add(cylinder, '#8A5A33', {
+          pos: [0.0, 0.25, s * 0.105],
+          rot: [-s * 0.2, 0, -0.9],
+          scale: [0.014, 0.08, 0.014],
+        });
+        p.add(cylinder, '#8A5A33', {
+          pos: [-0.07, 0.27, s * 0.1],
+          rot: [-s * 0.3, 0, 0.7],
+          scale: [0.014, 0.07, 0.014],
+        });
+      }
+      // A shiny red nose, like a reindeer
+      p.add(ball, '#E53935', { pos: [0.29, -0.01, 0], scale: [0.05, 0.045, 0.055] });
+      break;
     case 'crown':
       p.add(cylinder, '#F2C230', { pos: [-0.01, 0.18, 0], scale: [0.1, 0.07, 0.1] });
       for (let i = 0; i < 5; i++) {

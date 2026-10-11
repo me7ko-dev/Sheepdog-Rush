@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { UNITS_PER_METER } from '../game/constants';
 import { makeRng } from '../game/math';
-import type { Circle, LevelDef, PenDef, Rect, Side, Theme } from '../game/types';
+import type { Circle, LevelDef, Patch, PenDef, Rect, Side, Theme } from '../game/types';
 import { barnRect, bridgeIsVertical, bridgeRails, penInnerRect, penWalls } from '../game/world';
 import { blobGeometry, Parts, shadowMaterial, shapes } from './kit';
 
@@ -48,8 +48,12 @@ type ThemeColors = {
   berry: string;
   treeColors: string[];
   pineColors: string[];
-  /** Flowers in spring, fallen leaves in autumn. */
+  /** Flowers in spring, fallen leaves in autumn, snow lumps in winter. */
   smallColors: string[];
+  /** Light bounced up from the ground. */
+  groundLight: string;
+  /** Snow on roofs, fences, trees and rocks. */
+  snow: boolean;
 };
 
 export const THEMES: Record<Theme, ThemeColors> = {
@@ -66,6 +70,8 @@ export const THEMES: Record<Theme, ThemeColors> = {
     treeColors: ['#4CAF50', '#5DBB4E', '#3E9E45', '#7CC659'],
     pineColors: ['#2F7D4A', '#38905A', '#2A6E42'],
     smallColors: ['#FFFFFF', '#FFE066', '#FF9AA2', '#D7A6F0', '#9AD0FF'],
+    groundLight: '#5E9E3A',
+    snow: false,
   },
   autumn: {
     sky: '#B5DCF5',
@@ -80,6 +86,24 @@ export const THEMES: Record<Theme, ThemeColors> = {
     treeColors: ['#E8862A', '#D9562B', '#F2B33D', '#C9452E', '#9DBB4C'],
     pineColors: ['#2F6B45', '#3A7A4F', '#2A5E3E'],
     smallColors: ['#E8862A', '#D9562B', '#F2B33D', '#B5452E', '#F5D06A'],
+    groundLight: '#7E8F3A',
+    snow: false,
+  },
+  winter: {
+    sky: '#C4DFF2',
+    grass: '#D9E5F0',
+    grassDark: '#B6CADD',
+    grassOutside: '#CFDCE9',
+    tuft: '#8EA88C',
+    bush: '#2F6B4E',
+    bushDark: '#285C43',
+    bushLight: '#F4F8FC',
+    berry: '#D7263D',
+    treeColors: ['#F4F8FC', '#E6EEF6'],
+    pineColors: ['#2E6B4E', '#367A57', '#2A5E45'],
+    smallColors: ['#FFFFFF', '#F1F6FB', '#DDE8F2'],
+    groundLight: '#9DB4C8',
+    snow: true,
   },
 };
 
@@ -87,6 +111,7 @@ export const themeOf = (level: LevelDef): ThemeColors => THEMES[level.theme ?? '
 
 // The colors of the level being built (set at the start of buildFarm).
 let TH: ThemeColors = THEMES.spring;
+const SNOW = '#F7FAFD';
 
 /** Rotation (around Y) that turns a model's +Z side to face `side` of a rectangle. */
 function facing(side: Side): number {
@@ -157,7 +182,7 @@ export function buildFarm(level: LevelDef): Farm {
     const inside = x >= 0 && x <= W && z >= 0 && z <= H;
     const noise = 0.5 + 0.25 * Math.sin(x * 0.35 + level.seed) * Math.cos(z * 0.29) + 0.25 * Math.sin((x + z) * 0.13);
     tmp.copy(inside ? cIn : cOut).lerp(cDark, noise * 0.45);
-    if (inside && Math.floor(z / 2.5) % 2 === 0) tmp.offsetHSL(0, 0, 0.025);
+    if (inside && !TH.snow && Math.floor(z / 2.5) % 2 === 0) tmp.offsetHSL(0, 0, 0.025);
     gColors[i * 3] = tmp.r;
     gColors[i * 3 + 1] = tmp.g;
     gColors[i * 3 + 2] = tmp.b;
@@ -182,11 +207,18 @@ export function buildFarm(level: LevelDef): Farm {
       const pz = alongX ? cz : z0 + t * d;
       solid.add(shapes.box, post, { pos: [px, height / 2, pz], scale: [0.13, height, 0.13] });
       solid.add(shapes.box, post, { pos: [px, height + 0.03, pz], scale: [0.17, 0.06, 0.17] });
+      if (TH.snow) solid.add(shapes.ball, SNOW, { pos: [px, height + 0.07, pz], scale: [0.11, 0.06, 0.11] });
     }
     for (const y of [height * 0.38, height * 0.78]) {
       solid.add(shapes.box, rail, {
         pos: [cx, y, cz],
         scale: alongX ? [w, 0.09, 0.06] : [0.06, 0.09, d],
+      });
+    }
+    if (TH.snow) {
+      solid.add(shapes.box, SNOW, {
+        pos: [cx, height * 0.78 + 0.07, cz],
+        scale: alongX ? [w, 0.05, 0.09] : [0.09, 0.05, d],
       });
     }
     addShadow(cx, cz + 0.1, alongX ? w / 2 + 0.2 : 0.35, alongX ? 0.35 : d / 2 + 0.2);
@@ -313,9 +345,14 @@ export function buildFarm(level: LevelDef): Farm {
   // --- Mud puddles
   for (const mud of level.mud ?? []) addMud(solid, mud, rng);
 
-  // --- Pumpkins in autumn (outside the meadow and by the barn)
-  if (level.theme === 'autumn') {
-    for (let i = 0; i < 26; i++) {
+  // --- Ice and snowmen
+  for (const ice of level.ice ?? []) addIce(solid, ice, rng);
+  for (const sm of level.snowmen ?? []) addSnowman(solid, m(sm.x), m(sm.y), m(sm.r) / 0.8, rng, addShadow);
+
+  // --- Pumpkins in autumn, snowmen in winter (outside the meadow)
+  if (level.theme === 'autumn' || level.theme === 'winter') {
+    const count = level.theme === 'winter' ? 10 : 26;
+    for (let i = 0; i < count; i++) {
       const edge = rng() * 4;
       const out = 0.9 + rng() * 2.5;
       const along = rng();
@@ -325,7 +362,8 @@ export function buildFarm(level: LevelDef): Farm {
       else if (edge < 2) [x, z] = [along * W, H + out];
       else if (edge < 3) [x, z] = [-out, along * H];
       else [x, z] = [W + out, along * H];
-      addPumpkin(solid, x, z, 0.7 + rng() * 0.6, rng, addShadow);
+      if (level.theme === 'winter') addSnowman(solid, x, z, 0.8 + rng() * 0.4, rng, addShadow);
+      else addPumpkin(solid, x, z, 0.7 + rng() * 0.6, rng, addShadow);
     }
   }
 
@@ -429,6 +467,13 @@ function addBarn(
       rot: [0, 0, ang],
       scale: [len + 0.16, 0.16, D + 0.5],
     });
+    if (TH.snow) {
+      barn.add(shapes.box, SNOW, {
+        pos: [(x0 + x1) / 2 + nx * 0.19, Hw + (y0 + y1) / 2 + ny * 0.19, 0],
+        rot: [0, 0, ang],
+        scale: [len * 0.96, 0.08, D + 0.42],
+      });
+    }
   }
   barn.add(shapes.box, PALETTE.white, { pos: [0, Hw + h2 + 0.16, 0], scale: [0.22, 0.12, D + 0.55] });
 
@@ -617,9 +662,9 @@ function addRock(
     rot: [rng(), rng() * 3, 0],
     scale: [r * 0.45, r * 0.4, r * 0.45],
   });
-  faceted.add(shapes.lowBall, '#7FBF5A', {
+  faceted.add(shapes.lowBall, TH.snow ? SNOW : '#7FBF5A', {
     pos: [x - r * 0.2, r * 0.68, z - r * 0.1],
-    scale: [r * 0.4, r * 0.12, r * 0.35],
+    scale: TH.snow ? [r * 0.7, r * 0.16, r * 0.6] : [r * 0.4, r * 0.12, r * 0.35],
   });
 }
 
@@ -632,6 +677,7 @@ function addHay(solid: Parts, c: Circle, addShadow: (x: number, z: number, rx: n
   solid.add(shapes.cylinder, '#F2D27A', { pos: [x, 0.91, z], scale: [r * 0.75, 0.02, r * 0.75] });
   for (const y of [0.25, 0.65])
     solid.add(shapes.cylinder, PALETTE.hayDark, { pos: [x, y, z], scale: [r * 1.02, 0.06, r * 1.02] });
+  if (TH.snow) solid.add(shapes.ball, SNOW, { pos: [x, 0.92, z], scale: [r * 0.95, 0.1, r * 0.95] });
 }
 
 function addTree(
@@ -643,7 +689,7 @@ function addTree(
 ) {
   const s = 0.8 + rng() * 0.7;
   addShadow(x + 0.4, z + 0.5, 1.5 * s);
-  if (rng() < 0.4) {
+  if (rng() < (TH.snow ? 0.8 : 0.4)) {
     // Pine
     faceted.add(shapes.lowCylinder, '#7A4E2D', { pos: [x, 0.5 * s, z], scale: [0.18 * s, 1 * s, 0.18 * s] });
     for (let i = 0; i < 3; i++) {
@@ -651,6 +697,13 @@ function addTree(
         pos: [x, (1.2 + i * 0.85) * s, z],
         scale: [(1.3 - i * 0.32) * s, 1.4 * s, (1.3 - i * 0.32) * s],
       });
+      if (TH.snow) {
+        // A snowy tip on every layer
+        faceted.add(shapes.lowCone, SNOW, {
+          pos: [x, (1.62 + i * 0.85) * s, z],
+          scale: [(0.75 - i * 0.18) * s, 0.62 * s, (0.75 - i * 0.18) * s],
+        });
+      }
     }
   } else {
     faceted.add(shapes.lowCylinder, '#8A5A33', { pos: [x, 0.8 * s, z], scale: [0.2 * s, 1.6 * s, 0.2 * s] });
@@ -686,6 +739,87 @@ function addMud(solid: Parts, c: Circle, rng: () => number) {
   }
   // Wet shine
   solid.add(shapes.ball, '#B79A7A', { pos: [x - r * 0.25, 0.03, z - r * 0.2], scale: [r * 0.3, 0.008, r * 0.12] });
+}
+
+function addIce(solid: Parts, p: Patch, rng: () => number) {
+  const round = 'r' in p;
+  const cx = round ? m(p.x) : m(p.x + p.w / 2);
+  const cz = round ? m(p.y) : m(p.y + p.h / 2);
+  const sx = round ? m(p.r) : m(p.w) / 2;
+  const sz = round ? m(p.r) : m(p.h) / 2;
+  if (round) {
+    solid.add(shapes.disc, SNOW, { pos: [cx, 0.01, cz], scale: [sx * 1.1, 0.02, sz * 1.1] });
+    solid.add(shapes.disc, '#9FD3F0', { pos: [cx, 0.018, cz], scale: [sx, 0.02, sz] });
+    solid.add(shapes.disc, '#B9E2F7', {
+      pos: [cx - sx * 0.08, 0.024, cz - sz * 0.08],
+      scale: [sx * 0.8, 0.02, sz * 0.75],
+    });
+  } else {
+    solid.add(shapes.box, SNOW, { pos: [cx, 0.005, cz], scale: [sx * 2 + 0.4, 0.01, sz * 2 + 0.4] });
+    solid.add(shapes.box, '#9FD3F0', { pos: [cx, 0.012, cz], scale: [sx * 2, 0.012, sz * 2] });
+    solid.add(shapes.box, '#B9E2F7', { pos: [cx, 0.02, cz], scale: [sx * 2 - 0.5, 0.01, sz * 2 - 0.5] });
+  }
+  // Shiny scratches
+  const n = Math.max(3, Math.round((sx * sz) / 2.5));
+  for (let i = 0; i < n; i++) {
+    const a = rng() * Math.PI * 2;
+    const d = round ? Math.sqrt(rng()) * 0.7 : 0;
+    const px = round ? cx + Math.cos(a) * d * sx : cx + (rng() - 0.5) * (sx * 2 - 1);
+    const pz = round ? cz + Math.sin(a) * d * sz : cz + (rng() - 0.5) * (sz * 2 - 1);
+    solid.add(shapes.box, '#FFFFFF', {
+      pos: [px, 0.03, pz],
+      rot: [0, 0.6 + rng() * 0.3, 0],
+      scale: [0.5 + rng() * 0.6, 0.008, 0.05],
+    });
+  }
+}
+
+function addSnowman(
+  solid: Parts,
+  x: number,
+  z: number,
+  size: number,
+  rng: () => number,
+  addShadow: (x: number, z: number, rx: number, rz?: number) => void,
+) {
+  const s = size;
+  addShadow(x + 0.1, z + 0.15, 0.85 * s);
+  solid.add(shapes.ball, SNOW, { pos: [x, 0.55 * s, z], scale: [0.72 * s, 0.62 * s, 0.72 * s] });
+  solid.add(shapes.ball, SNOW, { pos: [x, 1.38 * s, z], scale: 0.5 * s });
+  solid.add(shapes.ball, SNOW, { pos: [x, 2.0 * s, z], scale: 0.35 * s });
+  // The face looks towards the camera (+Z)
+  for (const side of [-1, 1]) {
+    solid.add(shapes.ball, '#26222A', { pos: [x + side * 0.12 * s, 2.08 * s, z + 0.3 * s], scale: 0.045 * s });
+    // Stick arms
+    solid.add(shapes.cylinder, '#6B4429', {
+      pos: [x + side * 0.72 * s, 1.55 * s, z],
+      rot: [0, 0, side * -1.0],
+      scale: [0.03 * s, 0.6 * s, 0.03 * s],
+    });
+  }
+  solid.add(shapes.cone, '#F28C28', {
+    pos: [x, 1.98 * s, z + 0.43 * s],
+    rot: [Math.PI / 2, 0, 0],
+    scale: [0.06 * s, 0.24 * s, 0.06 * s],
+  });
+  for (const y of [1.25, 1.45]) {
+    solid.add(shapes.ball, '#26222A', { pos: [x, y * s, z + 0.48 * s], scale: 0.05 * s });
+  }
+  const scarf = rng() < 0.5 ? '#E53935' : '#2F80ED';
+  solid.add(shapes.torus, scarf, {
+    pos: [x, 1.74 * s, z],
+    rot: [Math.PI / 2, 0, 0],
+    scale: [0.33 * s, 0.33 * s, 0.4 * s],
+  });
+  solid.add(shapes.box, scarf, {
+    pos: [x + 0.18 * s, 1.55 * s, z + 0.3 * s],
+    rot: [0.2, 0, 0.15],
+    scale: [0.12 * s, 0.34 * s, 0.05 * s],
+  });
+  if (rng() < 0.6) {
+    solid.add(shapes.cylinder, '#26222A', { pos: [x, 2.31 * s, z], scale: [0.36 * s, 0.03 * s, 0.36 * s] });
+    solid.add(shapes.cylinder, '#26222A', { pos: [x, 2.47 * s, z], scale: [0.22 * s, 0.3 * s, 0.22 * s] });
+  }
 }
 
 function addPumpkin(
@@ -770,7 +904,7 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
       scale: [0.035, 0.24, 0.035],
     });
   }
-  const tuftCount = Math.round((W * H) / 3.2) + 260;
+  const tuftCount = Math.round((W * H) / (TH.snow ? 14 : 3.2)) + 260;
   const tufts = new THREE.InstancedMesh(
     tuft.geometry(),
     new THREE.MeshLambertMaterial({ vertexColors: true }),
@@ -778,7 +912,11 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
   );
   const flower = new Parts();
   const autumn = level.theme === 'autumn';
-  if (autumn) {
+  const winter = level.theme === 'winter';
+  if (winter) {
+    // A little lump of snow
+    flower.add(shapes.lowBall, '#FFFFFF', { pos: [0, 0, 0], scale: [0.16, 0.06, 0.12] });
+  } else if (autumn) {
     // A fallen leaf
     flower.add(shapes.ball, '#FFFFFF', { pos: [0, 0.02, 0], rot: [0.15, 0, 0.1], scale: [0.11, 0.012, 0.06] });
   } else {
@@ -791,7 +929,7 @@ function addGrassAndFlowers(group: THREE.Group, level: LevelDef, rng: () => numb
     }
     flower.add(shapes.ball, '#FFD23F', { pos: [0, 0.075, 0], scale: [0.035, 0.025, 0.035] });
   }
-  const flowerCount = Math.round((W * H) / (autumn ? 3 : 9)) + 80;
+  const flowerCount = Math.round((W * H) / (autumn ? 3 : winter ? 6 : 9)) + 80;
   const flowers = new THREE.InstancedMesh(
     flower.geometry(),
     new THREE.MeshLambertMaterial({ vertexColors: true }),

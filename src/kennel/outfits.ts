@@ -2,9 +2,10 @@ import type { StringKey } from '../i18n/en';
 
 // Looks for the sheepdog. Each one unlocks when the player has collected enough stars in total.
 
-export type Coat = { id: string; nameKey: StringKey; fur: string; light: string; stars: number };
-export type Collar = { id: string; nameKey: StringKey; color: string; stars: number };
-export type HatId = 'none' | 'straw' | 'cap' | 'flowers' | 'crown';
+export type Coat = { id: string; nameKey: StringKey; fur: string; light: string; stars: number; eyes?: string };
+/** `stripe` turns the collar into a striped winter scarf. */
+export type Collar = { id: string; nameKey: StringKey; color: string; stars: number; stripe?: string };
+export type HatId = 'none' | 'straw' | 'cap' | 'flowers' | 'crown' | 'beanie' | 'antlers';
 export type Hat = { id: HatId; nameKey: StringKey; stars: number };
 
 export const COATS: Coat[] = [
@@ -13,6 +14,7 @@ export const COATS: Coat[] = [
   { id: 'merle', nameKey: 'coat_merle', fur: '#7C879A', light: '#FFFFFF', stars: 15 },
   { id: 'golden', nameKey: 'coat_golden', fur: '#D49A45', light: '#FFF3DC', stars: 27 },
   { id: 'snow', nameKey: 'coat_snow', fur: '#ECE7DE', light: '#FFFFFF', stars: 42 },
+  { id: 'husky', nameKey: 'coat_husky', fur: '#5E6670', light: '#FFFFFF', stars: 72, eyes: '#3D8BD9' },
 ];
 
 export const COLLARS: Collar[] = [
@@ -21,6 +23,7 @@ export const COLLARS: Collar[] = [
   { id: 'green', nameKey: 'collar_green', color: '#3BAA4B', stars: 10 },
   { id: 'purple', nameKey: 'collar_purple', color: '#8E44AD', stars: 20 },
   { id: 'gold', nameKey: 'collar_gold', color: '#F2C230', stars: 36 },
+  { id: 'scarf', nameKey: 'collar_scarf', color: '#E53935', stars: 56, stripe: '#FFFFFF' },
 ];
 
 export const HATS: Hat[] = [
@@ -29,6 +32,8 @@ export const HATS: Hat[] = [
   { id: 'cap', nameKey: 'hat_cap', stars: 22 },
   { id: 'flowers', nameKey: 'hat_flowers', stars: 32 },
   { id: 'crown', nameKey: 'hat_crown', stars: 50 },
+  { id: 'beanie', nameKey: 'hat_beanie', stars: 64 },
+  { id: 'antlers', nameKey: 'hat_antlers', stars: 84 },
 ];
 
 export type Outfit = { coat: string; collar: string; hat: HatId };

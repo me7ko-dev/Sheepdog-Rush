@@ -12,6 +12,8 @@ export type CameraMode = 'follow' | 'orbit';
 /** How many meters of meadow fit across the screen while playing. */
 const VIEW_WIDTH = 11.5;
 const PITCH = (52 * Math.PI) / 180;
+const SNOW_BOX = 26;
+const SNOW_HEIGHT = 14;
 
 const FACING: Record<Side, number> = { bottom: 0, top: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 };
 const OUTWARD: Record<Side, [number, number]> = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -46,16 +48,17 @@ export class FarmScene {
     private level: LevelDef,
     private mode: CameraMode,
   ) {
-    const sky = themeOf(level).sky;
-    this.scene.background = new THREE.Color(sky);
-    this.scene.fog = new THREE.Fog(sky, 55, 120);
-    this.scene.add(new THREE.HemisphereLight('#EAF7FF', '#5E9E3A', 2.2));
-    const sun = new THREE.DirectionalLight('#FFF0D2', 2.1);
+    const theme = themeOf(level);
+    this.scene.background = new THREE.Color(theme.sky);
+    this.scene.fog = new THREE.Fog(theme.sky, 55, 120);
+    this.scene.add(new THREE.HemisphereLight('#EAF7FF', theme.groundLight, theme.snow ? 1.9 : 2.2));
+    const sun = new THREE.DirectionalLight(theme.snow ? '#FFF6E8' : '#FFF0D2', theme.snow ? 1.8 : 2.1);
     sun.position.set(-12, 30, 18);
     this.scene.add(sun);
 
     this.farm = buildFarm(level);
     this.scene.add(this.farm.group);
+    if (theme.snow) this.snow = this.makeSnowfall();
     this.scene.add(this.actors);
 
     // Bouncing arrow in front of the barn yard gate.
@@ -149,6 +152,7 @@ export class FarmScene {
     this.time += dt;
     const world = this.world;
     this.farm.animate(this.time, dt);
+    this.updateSnow(dt);
     if (!world) return;
     const time = this.time;
     const matrix = new THREE.Matrix4();
@@ -369,9 +373,55 @@ export class FarmScene {
     this.camera.lookAt(t.x, 0, t.z);
   }
 
+  // Falling snow: flakes in a box around the camera target. When one lands, it starts again on top.
+  private snow: { mesh: THREE.InstancedMesh; flakes: Float32Array } | null = null;
+
+  private makeSnowfall() {
+    const count = 260;
+    const mesh = new THREE.InstancedMesh(
+      new THREE.IcosahedronGeometry(0.06, 0),
+      new THREE.MeshBasicMaterial({ color: '#FFFFFF', fog: false }),
+      count,
+    );
+    mesh.frustumCulled = false;
+    // x, y, z offset from the camera target + a little sway phase for each flake.
+    const flakes = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      flakes[i * 4] = (Math.random() - 0.5) * SNOW_BOX;
+      flakes[i * 4 + 1] = Math.random() * SNOW_HEIGHT;
+      flakes[i * 4 + 2] = (Math.random() - 0.5) * SNOW_BOX;
+      flakes[i * 4 + 3] = Math.random() * Math.PI * 2;
+    }
+    this.scene.add(mesh);
+    return { mesh, flakes };
+  }
+
+  private updateSnow(dt: number) {
+    const snow = this.snow;
+    if (!snow) return;
+    const { mesh, flakes } = snow;
+    const matrix = new THREE.Matrix4();
+    const c = this.camTarget;
+    const n = flakes.length / 4;
+    for (let i = 0; i < n; i++) {
+      let y = flakes[i * 4 + 1] - dt * 1.4;
+      if (y < 0) y += SNOW_HEIGHT;
+      flakes[i * 4 + 1] = y;
+      const sway = Math.sin(this.time * 1.3 + flakes[i * 4 + 3]) * 0.4;
+      // Wrap around the camera target, so the snow is always where you look.
+      const wrap = (v: number) => ((((v + SNOW_BOX / 2) % SNOW_BOX) + SNOW_BOX) % SNOW_BOX) - SNOW_BOX / 2;
+      const x = c.x + wrap(flakes[i * 4] + sway - c.x);
+      const z = c.z + wrap(flakes[i * 4 + 2] - c.z);
+      matrix.makeTranslation(x, y, z);
+      mesh.setMatrixAt(i, matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
   /** Less decoration, for phones that can't keep up. */
   setLowDetail() {
     this.farm.setLowDetail();
+    if (this.snow) this.snow.mesh.count = 90;
   }
 
   dispose() {

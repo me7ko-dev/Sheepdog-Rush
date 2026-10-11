@@ -4,7 +4,9 @@ export type Vec = { x: number; y: number };
 export type Rect = { x: number; y: number; w: number; h: number };
 export type Circle = { x: number; y: number; r: number };
 export type Side = 'top' | 'bottom' | 'left' | 'right';
-export type Theme = 'spring' | 'autumn';
+export type Theme = 'spring' | 'autumn' | 'winter';
+/** A patch of ground (mud, ice): a circle or a rectangle. */
+export type Patch = Circle | Rect;
 
 /** The barn yard (кошара): a fenced rectangle with an opening (gate) on one side.
  *  The barn itself stands right behind the side opposite the gate. */
@@ -34,6 +36,10 @@ export type LevelDef = {
   wolf?: { x: number; y: number; delay: number };
   /** Muddy puddles: everyone walks at half speed in them. */
   mud?: Circle[];
+  /** Ice: slippery, everyone slides and turns slowly on it. Circles (ponds) or rectangles (frozen rivers). */
+  ice?: Patch[];
+  /** Snowmen block the way like rocks. */
+  snowmen?: Circle[];
   /** Look of the farm. Default: spring. */
   theme?: Theme;
   /** Seconds before the level is lost. */
@@ -118,6 +124,7 @@ export type World = {
   /** Bark shock waves (for the 3D effect). */
   barks: Effect[];
   mud: Circle[];
+  ice: Patch[];
   rng: () => number;
 };
 

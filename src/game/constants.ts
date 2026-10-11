@@ -34,3 +34,6 @@ export const BARK_WOLF_RADIUS = 240;
 export const BARK_COOLDOWN = 3.5;
 /** Speed in mud (1 = normal). */
 export const MUD_SPEED = 0.5;
+/** On ice: how much grip is left for steering (1 = normal) and how slowly sliding stops. */
+export const ICE_GRIP = 0.22;
+export const ICE_FRICTION = 0.35;
