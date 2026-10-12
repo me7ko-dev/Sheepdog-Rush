@@ -2,6 +2,8 @@
 
 Мобилна пъзел игра (Android и iOS) в 3D: водиш куче с пръст и прибираш всички овце в двора на хамбара, преди да изтече времето.
 
+**Играй в браузъра:** https://me7ko-dev.github.io/Sheepdog-Rush/
+
 **Направено с:** Expo SDK 57 (React Native) + TypeScript, three.js + expo-gl (3D графиката), `@shopify/react-native-skia` (звездите, иконите, мини-картата), `react-native-reanimated` и `react-native-gesture-handler` (анимации и докосване), AsyncStorage (запазване на прогреса).
 
 ## Какво има в играта

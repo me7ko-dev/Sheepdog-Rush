@@ -48,6 +48,9 @@
           "backgroundColor": "#8FD3F4"
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "baseUrl": "/Sheepdog-Rush"
+    }
   }
 }
